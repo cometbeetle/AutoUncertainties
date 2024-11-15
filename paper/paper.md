@@ -1,18 +1,24 @@
 ---
 title: 'AutoUncertainties: A Python package for uncertainty propagation'
+
 tags:
   - Python
   - uncertainty propagation
+  
 authors:
   - name: Varchas Gopalaswamy
     orcid: 0000-0002-8013-9314
     equal-contrib: true
     affiliation: "1" # (Multiple affiliations must be quoted)
+  - name: Ethan Mentzer
+    orcid: 0009-0003-8206-5050
+    affiliation: "1"
+    
 affiliations:
  - name: Laboratory for Laser Energetics, Rochester, USA
    index: 1
-date: 3 April 2024
 
+date: 3 April 2024
 ---
 
 # Summary
