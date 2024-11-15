@@ -30,6 +30,7 @@ scientific software stacks, and require keeping track of many variables and
 implementing custom error propagation rules for each mathematical operator. 
 The Python package `AutoUncertainties`, described here, provides a solution to this problem.
 
+
 # Statement of Need
 
 `AutoUncertainties` is Python package for uncertainty propagation. It provides
@@ -41,6 +42,7 @@ it eliminates the need for carrying around additional uncertainty variables,
 needing to implement custom propagation rules for any `NumPy` operator with a gradient
 rule implemented by `JAX`, and in most cases requires minimal modification to existing code,
 typically only when uncertainties are attached to central values.
+
 
 # Prior Work
 
@@ -65,6 +67,7 @@ from uncertainties import ufloat
 arr = np.array([ufloat(1, 0.1), ufloat(2, 0.002)])
 np.cos(arr)
 ```
+
 
 # Implementation
 
@@ -112,6 +115,7 @@ from auto_uncertainties import set_downcast_error
 set_downcast_error(True)
 ```
 
+
 ## Pint Integration
 
 `AutoUncertainties` is compatible with the `Pint` package and its implementation of `Quantity` objects. Support
@@ -120,10 +124,8 @@ is achieved with the components described in the following subsections.
 ### `UncertaintyQuantity`
 
 The `UncertaintyQuantity` class is an extension of `PlainQuantity` from `Pint`, and is designed to wrap `Uncertainty` 
-objects into `Quantity` objects. While `Uncertainty` objects can be wrapped directly into standard `Quantity` objects, 
-the resulting behavior is not ideal. For example, units are stripped from the `value` and `error` properties of
-the wrapped object, which are simply returned as scalars or arrays. `UncertaintyQuantity` solves this problem by 
-ensuring the aforementioned attributes are always returned as `Quantity` objects with their units preserved. 
+objects into `Quantity` objects. Wrapping `Uncertainty` objects with `UncertaintyQuantity` (rather than with the 
+standard `pint.Quantity` class) ensures better feature continuity between `Pint` and `AutoUncertainties`. 
 
 ```python
 from auto_uncertainties.pint import UncertaintyQuantity
@@ -142,9 +144,11 @@ The `UncertaintyRegistry` class is a custom `Pint` `UnitRegistry` in which the d
 The `Uncertainty` class contains the `from_quantities` method, which returns an `UncertaintyQuantity` object 
 created from two input `Quantity` objects, one representing the central value(s), and one representing the error(s). 
 
+
 ## Pandas
 
-Support for `pandas` via the ExtensionArray mechanism is largely functional.
+Support for `pandas` via the `ExtensionArray` mechanism is largely functional.
+
 
 
 # Acknowledgements
