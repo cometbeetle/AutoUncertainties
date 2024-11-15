@@ -51,29 +51,25 @@ intrinsic dunder methods such as `__add__`, it becomes problematic for advanced 
 For instance, calculating the uncertainty propagation due to the cosine requires the import of separate math libraries
 
 ```python
-
 import numpy as np
 from uncertainties import unumpy, ufloat
 arr = np.array([ufloat(1, 0.1), ufloat(2, 0.002)])
 unumpy.cos(arr)
-
 ```
 
-rather than being able to use `numpy` directly.
+rather than being able to use `NumPy` directly.
 
 ```python
-
 import numpy as np
 from uncertainties import ufloat
 arr = np.array([ufloat(1, 0.1), ufloat(2, 0.002)])
 np.cos(arr)
-
 ```
 
 # Implementation
 
 Linear uncertainty propagation of a function $f(x) : \mathbb{R}^n \rightarrow \mathbb{R}^m$ can be computed
-via the simple rule $$ \delta f_j (x)^2 = \left ( \dfrac{\partial f_j}{\partial x_i}\left( x \right ) \delta x_i  \right ) ^2 $$.
+via the simple rule $$ \delta f_j (x)^2 = \left ( \dfrac{\partial f_j}{\partial x_i}\left( x \right ) \delta x_i  \right ) ^2. $$
 
 To compute $\dfrac{\partial f_j}{\partial x_i}$ for arbitrary $f$, the implementation in `AutoUncertainties` relies on
 automatic differentiaion provided by `JAX`. Calls to any `NumPy` array function or universal function (ufunc) are 
@@ -103,26 +99,48 @@ These functions return:
 This behavior can be toggled using `set_display_rounding`:
 
 ```python
-
 from auto_uncertainties import set_display_rounding
 set_display_rounding(False)
-
 ```
 
-Calling `__array__`, whether via `numpy.array` or any other method, will by default raise an error. This can be disabled 
-via `set_downcast_error` so that a warning is issued instead, and the `Uncertainty` object is converted to an equivalent
-array of its nominal values:
+Calling `__array__`, whether via `numpy.array` or any other method, will by default issue a warning, and convert
+the `Uncertainty` object into an equivalent array of its nominal values, stripping all error information. To prevent 
+this behavior, the `set_downcast_error` function can be called so that an exception is raised instead:
 
 ```python
-
 from auto_uncertainties import set_downcast_error
-set_downcast_error(False)
-
+set_downcast_error(True)
 ```
 
 ## Pint Integration
 
-SECTION IS WORK IN PROGRESS
+`AutoUncertainties` is compatible with the `Pint` package and its implementation of `Quantity` objects. Support
+is achieved with the components described in the following subsections. 
+
+### `UncertaintyQuantity`
+
+The `UncertaintyQuantity` class is an extension of `PlainQuantity` from `Pint`, and is designed to wrap `Uncertainty` 
+objects into `Quantity` objects. While `Uncertainty` objects can be wrapped directly into standard `Quantity` objects, 
+the resulting behavior is not ideal. For example, units are stripped from the `value` and `error` properties of
+the wrapped object, which are simply returned as scalars or arrays. `UncertaintyQuantity` solves this problem by 
+ensuring the aforementioned attributes are always returned as `Quantity` objects with their units preserved. 
+
+```python
+from auto_uncertainties.pint import UncertaintyQuantity
+from auto_uncertainties import Uncertainty
+u = Uncertainty(1.0, 0.5)
+q = UncertaintyQuantity(u, 'radian')
+```
+
+### `UncertaintyRegistry`
+
+The `UncertaintyRegistry` class is a custom `Pint` `UnitRegistry` in which the default `Quantity` class is mapped to
+`UncertaintyQuantity`. 
+
+### `from_quantities`
+
+The `Uncertainty` class contains the `from_quantities` method, which returns an `UncertaintyQuantity` object 
+created from two input `Quantity` objects, one representing the central value(s), and one representing the error(s). 
 
 ## Pandas
 
@@ -132,9 +150,9 @@ Support for `pandas` via the ExtensionArray mechanism is largely functional.
 # Acknowledgements
 
 This material is based upon work supported by the Department of Energy [National Nuclear Security Administration] 
-University of Rochester “National Inertial Confinement Fusion Program” under Award Number(s) DE-NA0004144, and 
-Department of Energy [Office of Fusion Energy Sciences] University of Rochester “Applications of Machine Learning and 
-Data Science to predict, design and improve laser-fusion implosions for inertial fusion energy” under Award Number(s) 
+University of Rochester "National Inertial Confinement Fusion Program" under Award Number(s) DE-NA0004144, and 
+Department of Energy [Office of Fusion Energy Sciences] University of Rochester "Applications of Machine Learning and 
+Data Science to predict, design and improve laser-fusion implosions for inertial fusion energy" under Award Number(s) 
 DE-SC0024381.
 
 This report was prepared as an account of work sponsored by an agency of the United States Government. Neither 
