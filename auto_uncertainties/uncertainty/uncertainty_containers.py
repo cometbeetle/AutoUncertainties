@@ -48,7 +48,7 @@ UType = TypeVar("UType", np.ndarray, np.floating, float)
 """`TypeVar` specifying the supported underlying types wrapped by `Uncertainty` objects."""
 
 SType = TypeVar("SType", np.floating, float)
-"""`TypeVar` specifying the supported scalar values for `Uncertainty` objects."""
+"""`TypeVar` specifying the supported scalar types for `Uncertainty` objects."""
 
 
 class Uncertainty(Generic[UType]):
@@ -57,6 +57,11 @@ class Uncertainty(Generic[UType]):
 
     Parameters can be numbers, `numpy` arrays, `pint.Quantity` objects,
     other `Uncertainty` objects, or lists / tuples of `Uncertainty` objects.
+
+    `Uncertainty` objects only support float-based data types. If integers or
+    integer arrays are passed as parameters to the `Uncertainty` constructor,
+    they will be cast to `float` (or `numpy.float64` if a `numpy.integer` subclass
+    is detected).
 
     Generally, it is sipmler to let AutoUncertainties determine whether to
     instantiate a `VectorUncertainty` or a `ScalarUncertainty` based on the
@@ -181,9 +186,11 @@ class Uncertainty(Generic[UType]):
         # Zero error
         new_err = 0.0 if err is None else err
 
-        # Convert from int to float
+        # Convert from int to float (maintain NumPy dtypes if detected)
         new_err = float(new_err) if isinstance(new_err, int) else new_err
+        new_err = np.float64(new_err) if isinstance(new_err, np.integer) else new_err
         value = float(value) if isinstance(value, int) else value
+        value = np.float64(value) if isinstance(value, np.integer) else value
 
         nan = False
         if np.isfinite(value):
