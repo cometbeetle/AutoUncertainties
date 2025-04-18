@@ -175,7 +175,7 @@ of this behavior follow.
 
 ### Subtracting Equivalent Uncertainties
 
-Subtracting an `Uncertainty` from itself will not result in a standard devation of zero, as demonstrated
+Subtracting an `Uncertainty` from itself will not result in a standard deviation of zero, as demonstrated
 in the following example: 
 
 ```python
