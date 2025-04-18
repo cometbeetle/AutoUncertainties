@@ -902,7 +902,7 @@ class TestVectorUncertainty:
     def test_properties():
         v = VectorUncertainty(np.array([1, 2, 3]), np.array([4, 5, 6]))
 
-        assert np.array_equal(v.relative, np.array([4, 2, 2]))
+        assert np.array_equal(v.relative, np.array([4.0, 2.5, 2.0]))
         assert np.array_equal(v.rel2, v.relative**2)
         assert v.shape == (3,)
         assert v.nbytes == v._nom.nbytes + v._err.nbytes

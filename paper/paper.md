@@ -34,7 +34,7 @@ The Python package `AutoUncertainties`, described here, provides a solution to t
 
 # Statement of Need
 
-`AutoUncertainties` is Python package for uncertainty propagation. It provides
+`AutoUncertainties` is a Python package for uncertainty propagation. It provides
 a drop-in mechanism to add uncertainty information to Python scalar and `NumPy`
 [@harris2020array] array variables. It implements manual propagation rules for the Python dunder
 math methods, and uses automatic differentiation via `JAX` [@jax2018github] to propagate uncertainties
@@ -160,7 +160,7 @@ print(type(new_quantity))  # <class 'pint.Quantity'>
 ## Pandas
 
 Support for `pandas` [@pandas2024] via the `ExtensionArray` mechanism is largely functional. Upcoming
-aditions to `AutoUncertainties` will further improve compatibility.
+additions to `AutoUncertainties` will further improve compatibility.
 
 
 

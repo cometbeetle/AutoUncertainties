@@ -6,7 +6,7 @@ import copy
 import locale
 import math
 import operator
-from typing import TYPE_CHECKING, Any, Generic, Literal, TypeVar
+from typing import TYPE_CHECKING, Any, Generic, Literal, TypeVar, overload
 import warnings
 
 import joblib
@@ -32,6 +32,7 @@ ERROR_ON_DOWNCAST = False
 COMPARE_RTOL = 1e-9
 
 __all__ = [
+    "SType",
     "ScalarUncertainty",
     "UType",
     "Uncertainty",
@@ -43,8 +44,11 @@ __all__ = [
 ]
 
 
-UType = TypeVar("UType", np.ndarray, float)
+UType = TypeVar("UType", np.ndarray, np.floating, float)
 """`TypeVar` specifying the supported underlying types wrapped by `Uncertainty` objects."""
+
+SType = TypeVar("SType", np.floating, float)
+"""`TypeVar` specifying the supported scalar values for `Uncertainty` objects."""
 
 
 class Uncertainty(Generic[UType]):
@@ -111,12 +115,43 @@ class Uncertainty(Generic[UType]):
     def __getnewargs__(self) -> tuple[UType, UType]:
         return self._nom, self._err
 
-    @ignore_numpy_downcast_warnings
+    @overload
     def __new__(
-        cls: type[Uncertainty],
-        value: UType | Uncertainty | Sequence[Uncertainty] | PlainQuantity,
-        err: UType | PlainQuantity | None = None,
-    ) -> Uncertainty:
+        cls,
+        value: UType,
+        err: UType | None = None,
+    ) -> Uncertainty[UType]: ...
+
+    @overload
+    def __new__(
+        cls,
+        value: np.ndarray,
+        err: float | np.floating,
+    ) -> VectorUncertainty: ...
+
+    @overload
+    def __new__(
+        cls,
+        value: Uncertainty[UType],
+        err: None = None,
+    ) -> Uncertainty[UType]: ...
+
+    @overload
+    def __new__(
+        cls,
+        value: Sequence[SType | Uncertainty],
+        err: Sequence[SType | Uncertainty] | None = None,
+    ) -> VectorUncertainty: ...
+
+    @overload
+    def __new__(
+        cls,
+        value: PlainQuantity,
+        err: PlainQuantity | None = None,
+    ) -> PlainQuantity: ...
+
+    @ignore_numpy_downcast_warnings
+    def __new__(cls, value, err=None) -> Uncertainty | PlainQuantity | float:
         # Note: The typing system needs improvement, including some edge cases here
         # (see the comment in commit f652cc5 under this method).
         # Some of the issues are related to explicitly allowing Pint Quantities,
@@ -127,17 +162,21 @@ class Uncertainty(Generic[UType]):
         if hasattr(value, "units") or hasattr(err, "units"):
             return cls.from_quantities(value, err)
 
-        # If instantiated with a list or tuple of uncertainties
-        elif isinstance(value, Sequence):
-            return cls.from_sequence(value)
-
         # If instantiated with an Uncertainty subclass (even recursively)
         elif isinstance(value, Uncertainty):
             return cls(value.value, value.error)
 
-        # Numpy arrays
-        elif isinstance(value, np.ndarray) and value.ndim > 0:
-            return cls._new_vec(value, err)
+        # If instantiated with a list or tuple of uncertainties
+        elif (
+            np.ndim(value) > 0
+            and np.size(value) > 0
+            and isinstance(value[0], Uncertainty)
+        ):
+            return cls.from_sequence(value)
+
+        # Arrays or other vector structures
+        elif np.ndim(value) > 0:
+            return cls._new_vec(np.array(value), err)
 
         # Zero error
         new_err = 0.0 if err is None else err
@@ -164,28 +203,45 @@ class Uncertainty(Generic[UType]):
 
         return inst
 
+    @overload
     def __init__(
         self,
-        value: UType | Uncertainty | Sequence[Uncertainty] | PlainQuantity,
-        err: UType | PlainQuantity | None = None,
-        *,
-        trigger=False,
-    ):
+        value: UType,
+        err: UType | None = None,
+    ) -> None: ...
+
+    @overload
+    def __init__(
+        self,
+        value: np.ndarray,
+        err: float | np.floating,
+    ) -> None: ...
+
+    @overload
+    def __init__(
+        self,
+        value: Uncertainty[UType],
+        err: None = None,
+    ) -> None: ...
+
+    @overload
+    def __init__(
+        self,
+        value: Sequence[SType | Uncertainty],
+        err: Sequence[SType | Uncertainty] | None = None,
+    ) -> None: ...
+
+    @overload
+    def __init__(
+        self,
+        value: PlainQuantity,
+        err: PlainQuantity | None = None,
+    ) -> None: ...
+
+    def __init__(self, value, err=None, *, trigger=False) -> None:
         if trigger:
-            if hasattr(value, "units") or hasattr(err, "units"):
-                msg = "Parameters 'value' or 'err' should not have the 'units' attribute at this point."
-                raise ValueError(msg)
-
-            if isinstance(value, Uncertainty):
-                msg = "The 'value' parameter should not be an Uncertainty object at this point."
-                raise ValueError(msg)
-
-            if isinstance(value, Sequence):
-                msg = "The 'value' parameter should not be a Sequence subclass at this point."
-                raise ValueError(msg)
-
             if err is None:
-                msg = "'err' should not be None at the point."
+                msg = "'err' should not be None at this point"
                 raise ValueError(msg)
 
             self._nom = value
@@ -202,8 +258,8 @@ class Uncertainty(Generic[UType]):
             new_err = np.ones_like(value) * err
 
         # Array of errors
-        elif isinstance(err, np.ndarray):
-            new_err = err
+        elif np.ndim(err) > 0:
+            new_err = np.array(err)
             assert np.ndim(value) == np.ndim(new_err)
             assert np.shape(value) == np.shape(new_err)
 
@@ -217,6 +273,12 @@ class Uncertainty(Generic[UType]):
         if np.any(new_err < 0):
             msg = f"Found {np.count_nonzero(new_err < 0)} negative values for the standard deviation!"
             raise NegativeStdDevError(msg)
+
+        # Convert int data to float
+        if issubclass(value.dtype.type, np.integer):
+            value = value.astype(np.float64)
+        if issubclass(new_err.dtype.type, np.integer):
+            new_err = new_err.astype(np.float64)
 
         inst = object.__new__(VectorUncertainty)
         inst.__init__(value, new_err, trigger=True)
@@ -264,9 +326,9 @@ class Uncertainty(Generic[UType]):
         :param err: Error value to add
         """
 
-        val = self._nom
-        old_err = self._err
-        new_err = np.sqrt(old_err**2 + err**2)
+        val: UType = self._nom
+        old_err: UType = self._err
+        new_err: UType = np.sqrt(old_err**2 + err**2)  # type: ignore
 
         return Uncertainty(val, new_err)
 
@@ -288,7 +350,29 @@ class Uncertainty(Generic[UType]):
             return Uncertainty(float(u1), float(u2))
 
     @classmethod
-    def from_quantities(cls, value, err) -> Uncertainty | PlainQuantity:
+    @overload
+    def from_quantities(
+        cls,
+        value: PlainQuantity[UType] | UType,
+        err: PlainQuantity[UType] | None = None,
+    ) -> PlainQuantity: ...
+
+    @classmethod
+    @overload
+    def from_quantities(
+        cls,
+        value: PlainQuantity[UType],
+        err: PlainQuantity[UType] | UType | None = None,
+    ) -> PlainQuantity: ...
+
+    @classmethod
+    @overload
+    def from_quantities(
+        cls, value: UType, err: UType | None = None
+    ) -> Uncertainty[UType]: ...
+
+    @classmethod
+    def from_quantities(cls, value, err=None):
         """
         Create a `pint.Quantity` object with uncertainty from one or more `~pint.Quantity` objects.
 
@@ -331,7 +415,7 @@ class Uncertainty(Generic[UType]):
     @classmethod
     def from_list(
         cls, u_list: Sequence | np.ndarray
-    ) -> Uncertainty:  # pragma: no cover
+    ) -> VectorUncertainty:  # pragma: no cover
         """
         Alias for `from_sequence`.
 
@@ -340,7 +424,9 @@ class Uncertainty(Generic[UType]):
         return cls.from_sequence(u_list)
 
     @classmethod
-    def from_sequence(cls, seq: Sequence | np.ndarray) -> Uncertainty:
+    def from_sequence(
+        cls, seq: Sequence[SType | Uncertainty[SType]] | np.ndarray
+    ) -> VectorUncertainty:
         """
         Create an `Uncertainty` object from a sequence of `Uncertainty` objects,
         a `numpy.ndarray`, or other sequence supporting math operations.
@@ -673,13 +759,7 @@ class VectorUncertainty(VectorDisplay, Uncertainty[np.ndarray]):
             msg = f"Attribute {item} not available in Uncertainty, or as NumPy ufunc or function."
             raise AttributeError(msg) from None
 
-    def __init__(
-        self,
-        value: np.ndarray | VectorUncertainty,
-        err: np.ndarray | None = None,
-        *,
-        trigger=False,
-    ):
+    def __init__(self, value, err=None, *, trigger=False):
         if trigger:
             super().__init__(value, err, trigger=trigger)
 
@@ -850,7 +930,7 @@ class VectorUncertainty(VectorDisplay, Uncertainty[np.ndarray]):
         return int.from_bytes(bytes(digest, encoding="utf-8"), "big")
 
 
-class ScalarUncertainty(ScalarDisplay, Uncertainty[float]):
+class ScalarUncertainty(ScalarDisplay, Uncertainty[SType]):
     """Scalar `Uncertainty` class."""
 
     @property
