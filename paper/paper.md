@@ -225,14 +225,6 @@ graph of the result of chained operations, similar to what is done in `uncertain
 of such a system places it out of scope for `AutoUncertainties` at this time.
 
 
-## Typing System
-
-Type hinting is employed throughout `AutoUncertainties` to aid static analysis of the package. At this time,
-however, many typing inconsistencies can be detected by static type enforcement tools like 
-[Mypy](https://mypy-lang.org/) and [Pyright](https://microsoft.github.io/pyright/). Future improvements 
-to `AutoUncertainties` will likely include typing adjustments to the code, in order to avoid subtle bugs.
-
-
 
 # Further Information
 

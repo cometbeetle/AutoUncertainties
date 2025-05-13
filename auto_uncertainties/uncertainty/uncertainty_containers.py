@@ -796,8 +796,12 @@ class VectorUncertainty(VectorDisplay, Uncertainty[np.ndarray]):
     @property
     def relative(self):
         rel = np.zeros_like(self._nom)
-        valid = np.isfinite(self._nom) & (self._nom > 0)
-        rel[valid] = self._err[valid] / self._nom[valid]
+        inf = np.isinf(self._nom)
+        nan = self._nom == 0
+        valid = ~inf & ~nan
+        rel[valid] = self._err[valid] / np.abs(self._nom[valid])
+        rel[inf] = np.inf
+        rel[nan] = np.nan
         return rel
 
     @property
@@ -943,7 +947,7 @@ class ScalarUncertainty(ScalarDisplay, Uncertainty[SType]):
     @property
     def relative(self):
         try:
-            return self._err / self._nom
+            return self._err / abs(self._nom)
         except OverflowError:
             return np.inf
         except ZeroDivisionError:
