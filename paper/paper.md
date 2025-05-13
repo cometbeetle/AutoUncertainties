@@ -25,10 +25,10 @@ date: 7 February 2025
 # Summary
 
 Propagation of uncertainties is of great utility in the experimental sciences.
-While the rules of (linear) uncertainty propagation are simple, managing many 
+While the rules of (linear) uncertainty propagation are straightforward, managing many 
 variables with uncertainty information can quickly become complicated in large 
-scientific software stacks, and require keeping track of many variables and 
-implementing custom error propagation rules for each mathematical operator. 
+scientific software stacks. Often, this requires programmers to keep track of many variables 
+and implement custom error propagation rules for each mathematical operator and function. 
 The Python package `AutoUncertainties`, described here, provides a solution to this problem.
 
 
@@ -39,10 +39,15 @@ a drop-in mechanism to add uncertainty information to Python scalar and `NumPy`
 [@harris2020array] array variables. It implements manual propagation rules for the Python dunder
 math methods, and uses automatic differentiation via `JAX` [@jax2018github] to propagate uncertainties
 for most `NumPy` methods applied to both scalar and `NumPy` array variables. In doing so,
-it eliminates the need for carrying around additional uncertainty variables,
-needing to implement custom propagation rules for any `NumPy` operator with a gradient
-rule implemented by `JAX`, and in most cases requires minimal modification to existing code,
-typically only when uncertainties are attached to central values.
+it eliminates the need for carrying around additional uncertainty variables or
+for implementing custom propagation rules for any `NumPy` operator with a gradient
+rule implemented by `JAX`. Furthermore, in most cases, it requires minimal modification to existing 
+code—typically only when uncertainties are attached to central values.
+
+
+==============================================
+- TODO: Mention why this is necessary (i.e., a particular use case that inspired the package).
+==============================================
 
 
 # Prior Work
@@ -50,11 +55,12 @@ typically only when uncertainties are attached to central values.
 To the author's knowledge, the only existing error propagation library in Python is the `uncertainties` 
 [@lebigot2024] package, which inspired the current work. While extremely useful, the `uncertainties` 
 package relies on hand-implemented rules and functions for uncertainty propagation of array and scalar data. 
-While this is transparent for the intrinsic dunder methods such as `__add__`, it becomes problematic for advanced 
-mathematical operators. For instance, calculating the uncertainty propagation due to the cosine requires the 
-import of separate math libraries
+This is mostly trivial for Python's intrinsic arithmetic and logical operations such as `__add__`, however it becomes 
+problematic for more advanced mathematical operations. For instance, calculating the uncertainty propagation due to 
+the cosine function requires the import of separate math libraries
 
 ```python
+# Using uncertainties v3.2.3
 import numpy as np
 from uncertainties import unumpy, ufloat
 arr = np.array([ufloat(1, 0.1), ufloat(2, 0.002)])
@@ -73,8 +79,9 @@ np.cos(arr)  # raises an exception
 
 # Implementation
 
-Linear uncertainty propagation of a function $f(x) : \mathbb{R}^n \rightarrow \mathbb{R}^m$ can be computed
-via the simple rule $$ \delta f_j (x)^2 = \left ( \dfrac{\partial f_j}{\partial x_i}\left( x \right ) \delta x_i  \right ) ^2. $$
+For a function $f(x) : \mathbb{R}^n \rightarrow \mathbb{R}^m$ of independent and identically distributed (i.i.d.) 
+variables, linear uncertainty propagation can be computed via the simple rule 
+$$ \delta f_j (\mathbf x)^2 = \sum_i^n \left(\dfrac{\partial f_j}{\partial x_i} \delta x_i \right)^2, \quad\quad j \in [1, m].$$
 
 To compute $\dfrac{\partial f_j}{\partial x_i}$ for arbitrary $f$, the implementation in `AutoUncertainties` relies on
 automatic differentiaion provided by `JAX`. Calls to any `NumPy` array function or universal function (ufunc) are 
@@ -107,6 +114,10 @@ print(u1.plus_minus(0.5))  # 5.25 +/- 0.901388
 seq = Uncertainty.from_sequence([u1, u2])
 print(seq)  # [5.25 +/- 0.75, 1.85 +/- 0.4]
 ```
+
+==============================================
+- TODO: Clarify difference between ScalarUncertainty and VectorUncertainty / how they interact.
+==============================================
 
 To extract errors / central values from arbitrary objects, the accessors `nominal_values` and `std_devs` are provided. 
 These functions return:
