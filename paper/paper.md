@@ -128,33 +128,6 @@ programmers should be aware that the `ScalarUncertainty` is constructed spontane
 `NumPy` array upon request. This allows for vectorized operations on `VectorUncertainty` objects, which
 perform significantly better than executing individual operations on a sequence of `ScalarUncertainty` objects.
 
-To extract errors / central values from arbitrary objects, the accessors `nominal_values` and `std_devs` are provided. 
-These functions return:
-
-- The central values and errors, respectively, if the input is an `Uncertainty` object.
-- The input and zero if the input is any other kind of object.
-
-`Uncertainty` objects are displayed using rounding rules based on the uncertainty, i.e.,
-
-- Error to 2 significant digits.
-- Central value to first signficant digit of error, or two significant figures (whichever is more significant digits).
-
-This behavior can be toggled using `set_display_rounding`:
-
-```python
-from auto_uncertainties import set_display_rounding
-set_display_rounding(False)
-```
-
-Calling `__array__`, whether via `numpy.array` or any other method, will by default issue a warning, and convert
-the `Uncertainty` object into an equivalent array of its nominal values, stripping all error information. To prevent 
-this behavior, the `set_downcast_error` function can be called so that an exception is raised instead:
-
-```python
-from auto_uncertainties import set_downcast_error
-set_downcast_error(True)
-```
-
 
 ## Support for Pint
 
@@ -190,54 +163,13 @@ additions to `AutoUncertainties` will further improve compatibility.
 
 To simplify operations on `Uncertainty` objects, `AutoUncertainties` assumes all variables are independent
 and normally distributed. This means that, in the case where the programmer assumes dependence
-between two or more `Uncertainty` objects, unexpected and counter-intuitive behavior may arise. Two examples
-of this behavior follow.
-
-### Subtracting Equivalent Uncertainties
-
-Subtracting an `Uncertainty` from itself will not result in a standard deviation of zero, as demonstrated
-in the following example: 
-
-```python
-x = Uncertainty(5.0, 0.5)
-print(x - x)  # 0 +/- 0.707107
-```
-
-### Mean Error Propagation
-
-When multiplying a vector by a scalar `Uncertainty` object, each component of the resulting vector 
-is assumed to be a multivariate normal distribution with no covariance, 
-which may not be the desired behavior. For instance, taking the mean of such a 
-vector will return an `Uncertainty` object with an unexpectedly small standard deviation. 
-
-```python
-u = Uncertainty(5.0, 0.5)
-arr = np.ones(10) * 10
-result = np.mean(u * arr)  # 50 +/- 1.58114, rather than 50 +/- 5 as expected
-```
-
-To obtain the uncertainty corresponding to the case where each element of the array is fully correlated, 
-two workaround techniques can be used:
-
-1. Separate the central value from the relative error, multiply the vector by the central value, take the mean
-   of the resulting vector, and then multiply by the previously stored relative error.
-
-   ```python
-   u = Uncertainty(5.0, 0.5)
-   scale_error = Uncertainty(1, u.relative)  # collect relative error
-   scale_value = u.value                     # collect central value
-
-   arr = np.ones(10) * 10
-   result = np.mean(scale_value * arr) * scale_error  # 50 +/- 5
-   ```
-
-2. Take the mean of the vector, and then multiply by the `Uncertainty`:
-
-   ```python
-   u = Uncertainty(5.0, 0.5)
-   arr = np.ones(10) * 10
-   result = u * np.mean(arr)  # 50 +/- 5
-   ```
+between two or more `Uncertainty` objects, unexpected and counter-intuitive behavior may arise during 
+uncertainty propagation. This is a common pitfall when working with `Uncertainty` objects, especially since 
+the package will not prevent users from manipulating variables in a manner that implies dependence. Examples 
+of this behavior, along with certain potential workarounds, can be found [here](https://autouncertainties.readthedocs.io/en/latest/index.html#current-limitations-and-future-work) 
+in the documentation. In general, most binary operations involving the same variable twice will 
+produce undesired results (for instance, performing `X - X`, where X is an `Uncertainty` object, will
+*not* result in a standard deviation of zero).
 
 These workarounds are nevertheless cumbersome, and cause `AutoUncertainties` to fall somewhat short of the original
 goals of automated error propagation. In principle, this could be addressed by storing a full computational
@@ -248,7 +180,7 @@ of such a system places it out of scope for `AutoUncertainties` at this time.
 
 # Further Information
 
-Additional API information and usage examples can be found on the 
+Full API information and additional usage examples can be found on the 
 [documentation website](https://autouncertainties.readthedocs.io/en/latest/). All source
 code for the project is stored and maintained on the `AutoUncertainties` 
 [GitHub repository](https://github.com/varchasgopalaswamy/AutoUncertainties), where 

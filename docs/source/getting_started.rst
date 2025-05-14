@@ -19,7 +19,7 @@ Getting Started
 
 .. code:: bash
 
-    pip install auto_uncertainties[pandas]
+    pip install auto-uncertainties[pandas]
 
 * The documentation can be built by installing `auto-uncertainties` with the `[docs]` extension:
 

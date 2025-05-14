@@ -190,6 +190,67 @@ At the moment, it makes sense to disable the Pandas tests until certain features
       ...
   auto_uncertainties.exceptions.DowncastError: The uncertainty is stripped when downcasting to ndarray.
   ```
+  
+## Current Limitations and Future Work
+
+### Dependent Random Variables
+
+To simplify operations on `Uncertainty` objects, `AutoUncertainties` assumes all variables are independent and 
+normally distributed. This means that, in the case where a user assumes dependence between two or more `Uncertainty` 
+objects, unexpected and counter-intuitive behavior may arise during uncertainty propagation. This is a common 
+pitfall when working with `Uncertainty` objects, especially since the package will not prevent you from 
+manipulating variables in a manner that implies dependence.
+
+* **Subtracting Equivalent Uncertainties**
+
+  Subtracting an `Uncertainty` from itself will not result in a standard deviation of zero:
+
+  ```python
+  x = Uncertainty(5.0, 0.5)
+  print(x - x)  # 0 +/- 0.707107
+  ```
+
+* **Mean Error Propagation**
+
+  When multiplying a vector by a scalar `Uncertainty` object, each component of the resulting vector
+  is assumed to be a multivariate normal distribution with no covariance,
+  which may not be the desired behavior. For instance, taking the mean of such a
+  vector will return an `Uncertainty` object with an unexpectedly small standard deviation.
+
+  ```python
+  u = Uncertainty(5.0, 0.5)
+  arr = np.ones(10) * 10
+  result = np.mean(u * arr)  # 50 +/- 1.58114, rather than 50 +/- 5 as expected
+  ```
+  
+  To obtain the uncertainty corresponding to the case where each element of the array is fully correlated,
+  two workaround techniques can be used:
+
+  1. Separate the central value from the relative error, multiply the vector by the central value, take the mean
+     of the resulting vector, and then multiply by the previously stored relative error.
+
+     ```python
+     u = Uncertainty(5.0, 0.5)
+     scale_error = Uncertainty(1, u.relative)  # collect relative error
+     scale_value = u.value                     # collect central value
+
+     arr = np.ones(10) * 10
+     result = np.mean(scale_value * arr) * scale_error  # 50 +/- 5
+     ```
+
+  2. Take the mean of the vector, and then multiply by the `Uncertainty`:
+
+     ```python
+     u = Uncertainty(5.0, 0.5)
+     arr = np.ones(10) * 10
+     result = u * np.mean(arr)  # 50 +/- 5
+     ```
+
+These workarounds are nevertheless cumbersome, and cause `AutoUncertainties` to fall somewhat short of the original
+goals of automated error propagation. In principle, this could be addressed by storing a full computational
+graph of the result of chained operations, similar to what is done in `uncertainties`. However, the complexity
+of such a system places it out of scope for `AutoUncertainties` at this time.
+
 
 ## Inspirations
 
