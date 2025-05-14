@@ -25,7 +25,7 @@ For array support:
 To install, simply run:
 
 ```
-pip install auto_uncertainties
+pip install auto-uncertainties
 ```
 
 ## Build Documentation
@@ -34,11 +34,25 @@ To build the documentation locally, clone the repository, create a virtual Pytho
 (if desired), and run the following commands within the repository directory:
 
 ```bash
-pip install auto_uncertainties[docs]
+pip install auto-uncertainties[docs]
 sphinx-build docs/source docs/build
 ```
 
 Once built, the docs can be found under the `docs/build` subdirectory.
+
+## CI and Unit Testing
+
+Development of AutoUncertainties relies on a series of unit tests located in the `tests` directory. These
+are automatically run using GitHub actions when commits are pushed to the repository. To run the tests
+manually, first install the package with testing capabilities:
+
+```bash
+pip install auto-uncertainties[CI]
+coverage run -m pytest --cov --cov-report=term --ignore=tests/pandas
+```
+
+At the moment, it makes sense to disable the Pandas tests until certain features are finalized.
+
 
 ## Basic Usage
 

@@ -63,9 +63,19 @@ class Uncertainty(Generic[UType]):
     they will be cast to `float` (or `numpy.float64` if a `numpy.integer` subclass
     is detected).
 
-    Generally, it is sipmler to let AutoUncertainties determine whether to
-    instantiate a `VectorUncertainty` or a `ScalarUncertainty` based on the
-    arguments passed to `Uncertainty`:
+    The `Uncertainty` class relies on two subclasses for its full implementation: `ScalarUncertainty` and
+    `VectorUncertainty`. In general, `VectorUncertainty` objects support most operations that standard
+    `NumPy` arrays support, whereas `ScalarUncertainty` objects support only scalar operations.
+
+    `VectorUncertainty` objects are **not** equivalent to arrays or lists of `ScalarUncertainty`
+    objects. Although indexing into a `VectorUncertainty` will return a `ScalarUncertainty`, programmers
+    should be aware that the `ScalarUncertainty` is constructed spontaneously from an underlying `NumPy`
+    array upon request. This allows for vectorized operations on `VectorUncertainty` objects, which
+    perform significantly better than executing individual operations on a sequence of `ScalarUncertainty`
+    objects.
+
+    AutoUncertainties will determine whether to instantiate a `VectorUncertainty`
+    or a `ScalarUncertainty` based on the arguments passed to `Uncertainty`:
 
     .. code-block:: python
        :caption: Example
@@ -76,14 +86,6 @@ class Uncertainty(Generic[UType]):
        # Creats a VectorUncertainty
        v = Uncertainty(np.array([1.0, 2.0, 3.0]), np.array([1.5, 1.2, 1.1])
 
-    However, users can also directly instantiate `ScalarUncertainty` or
-    `VectorUncertainty` objects if necessary:
-
-    .. code-block:: python
-       :caption: Example
-
-       s = ScalarUncertainty(10.0, 1.5)
-       v = VectorUncertainty(np.array([1.0, 2.0, 3.0]), np.array([1.5, 1.2, 1.1])
 
     :param value: The central value(s)
     :param err: The uncertainty value(s). Zero if not provided.
@@ -124,7 +126,7 @@ class Uncertainty(Generic[UType]):
     def __new__(
         cls,
         value: UType,
-        err: UType | None = None,
+        err: UType | None = ...,
     ) -> Uncertainty[UType]: ...
 
     @overload
@@ -138,21 +140,21 @@ class Uncertainty(Generic[UType]):
     def __new__(
         cls,
         value: Uncertainty[UType],
-        err: None = None,
+        err: None = ...,
     ) -> Uncertainty[UType]: ...
 
     @overload
     def __new__(
         cls,
         value: Sequence[SType | Uncertainty],
-        err: Sequence[SType | Uncertainty] | None = None,
+        err: Sequence[SType | Uncertainty] | None = ...,
     ) -> VectorUncertainty: ...
 
     @overload
     def __new__(
         cls,
         value: PlainQuantity,
-        err: PlainQuantity | None = None,
+        err: PlainQuantity | None = ...,
     ) -> PlainQuantity: ...
 
     @ignore_numpy_downcast_warnings
@@ -214,7 +216,7 @@ class Uncertainty(Generic[UType]):
     def __init__(
         self,
         value: UType,
-        err: UType | None = None,
+        err: UType | None = ...,
     ) -> None: ...
 
     @overload
@@ -228,21 +230,21 @@ class Uncertainty(Generic[UType]):
     def __init__(
         self,
         value: Uncertainty[UType],
-        err: None = None,
+        err: None = ...,
     ) -> None: ...
 
     @overload
     def __init__(
         self,
         value: Sequence[SType | Uncertainty],
-        err: Sequence[SType | Uncertainty] | None = None,
+        err: Sequence[SType | Uncertainty] | None = ...,
     ) -> None: ...
 
     @overload
     def __init__(
         self,
         value: PlainQuantity,
-        err: PlainQuantity | None = None,
+        err: PlainQuantity | None = ...,
     ) -> None: ...
 
     def __init__(self, value, err=None, *, trigger=False) -> None:
@@ -436,9 +438,10 @@ class Uncertainty(Generic[UType]):
     ) -> VectorUncertainty:
         """
         Create an `Uncertainty` object from a sequence of `Uncertainty` objects,
-        a `numpy.ndarray`, or other sequence supporting math operations.
+        a sequence of `pint.Quantity` objects, a `numpy.ndarray`, or other sequence
+        supporting math operations.
 
-        :param seq: A sequence of `Uncertainty` objects.
+        :param seq: One of the above types of sequence.
 
         .. note::
 
@@ -703,6 +706,18 @@ class Uncertainty(Generic[UType]):
             else:
                 return wrap_numpy("ufunc", ufunc, args, kwargs)
 
+    def __array__(self, dtype=None, *, copy=None) -> np.ndarray:
+        msg = "The uncertainty is stripped when downcasting to ndarray."
+        if ERROR_ON_DOWNCAST:
+            raise DowncastError(msg)
+        else:
+            warnings.warn(
+                msg,
+                DowncastWarning,
+                stacklevel=2,
+            )
+            return np.asarray(self._nom, dtype=dtype, copy=copy)
+
     def __getattr__(self, item):
         if item.startswith("__array_"):
             # Handle array protocol attributes other than `__array__`
@@ -766,15 +781,6 @@ class VectorUncertainty(VectorDisplay, Uncertainty[np.ndarray]):
             msg = f"Attribute {item} not available in Uncertainty, or as NumPy ufunc or function."
             raise AttributeError(msg) from None
 
-    def __init__(self, value, err=None, *, trigger=False):
-        if trigger:
-            super().__init__(value, err, trigger=trigger)
-
-            # This should not be executed, as the parent class should account for this
-            if np.ndim(self._nom) == 0:  # pragma: no cover
-                msg = "VectorUncertainty must have a dimension greater than 0!"
-                raise ValueError(msg)
-
     def __ne__(self, other):
         out = self.__eq__(other)
         return np.logical_not(out)
@@ -811,21 +817,11 @@ class VectorUncertainty(VectorDisplay, Uncertainty[np.ndarray]):
     def __round__(self, ndigits):
         return self.__class__(np.round(self._nom, decimals=ndigits), self._err)
 
-    def __array__(self, t=None) -> np.ndarray:
-        if ERROR_ON_DOWNCAST:
-            msg = "The uncertainty is stripped when downcasting to ndarray."
-            raise DowncastError(msg)
-        else:
-            warnings.warn(
-                "The uncertainty is stripped when downcasting to ndarray.",
-                DowncastWarning,
-                stacklevel=2,
-            )
-            return np.asarray(self._nom)
-
     def clip(self, min=None, max=None, out=None, **kwargs) -> Uncertainty:  # noqa: A002
         """NumPy `~numpy.ndarray.clip` implementation."""
-        return self.__class__(self._nom.clip(min, max, out, **kwargs), self._err)
+        return self.__class__(
+            self._nom.clip(min=min, max=max, out=out, **kwargs), self._err
+        )
 
     def fill(self, value) -> None:
         """NumPy `~numpy.ndarray.fill` implementation."""
@@ -839,7 +835,7 @@ class VectorUncertainty(VectorDisplay, Uncertainty[np.ndarray]):
             self._nom.put(indices, values._nom, mode)
             self._err.put(indices, values._err, mode)
         else:
-            msg = "Can only 'put' Uncertainties into uncertainties!"
+            msg = "Can only 'put' Uncertainties into Uncertainties!"
             raise TypeError(msg)
 
     def copy(self):
@@ -954,12 +950,12 @@ class ScalarUncertainty(ScalarDisplay, Uncertainty[SType]):
             return np.nan
 
     def __float__(self):
+        msg = "The uncertainty is stripped when downcasting to float."
         if ERROR_ON_DOWNCAST:
-            msg = "The uncertainty is stripped when downcasting to float."
             raise DowncastError(msg)
         else:
             warnings.warn(
-                "The uncertainty is stripped when downcasting to float.",
+                msg,
                 DowncastWarning,
                 stacklevel=2,
             )
@@ -967,24 +963,24 @@ class ScalarUncertainty(ScalarDisplay, Uncertainty[SType]):
         return float(self._nom)
 
     def __int__(self):
+        msg = "The uncertainty is stripped when downcasting to int."
         if ERROR_ON_DOWNCAST:
-            msg = "The uncertainty is stripped when downcasting to int."
             raise DowncastError(msg)
         else:
             warnings.warn(
-                "The uncertainty is stripped when downcasting to int.",
+                msg,
                 DowncastWarning,
                 stacklevel=2,
             )
         return int(self._nom)
 
     def __complex__(self):
+        msg = "The uncertainty is stripped when downcasting to float."
         if ERROR_ON_DOWNCAST:
-            msg = "The uncertainty is stripped when downcasting to float."
             raise DowncastError(msg)
         else:
             warnings.warn(
-                "The uncertainty is stripped when downcasting to float.",
+                msg,
                 DowncastWarning,
                 stacklevel=2,
             )
@@ -1058,7 +1054,7 @@ def _check_units(value, err) -> tuple[Any, Any, Any]:
     return ret_val, ret_err, ret_units
 
 
-def nominal_values(x) -> UType:
+def nominal_values(x) -> float | np.floating | np.ndarray:
     """Return the central value of an `Uncertainty` object if it is one, otherwise returns the object."""
     # Is an Uncertainty
     if hasattr(x, "_nom"):
@@ -1083,7 +1079,7 @@ def nominal_values(x) -> UType:
                     return x2.value
 
 
-def std_devs(x) -> UType:
+def std_devs(x) -> float | np.floating | np.ndarray:
     """Return the uncertainty of an `Uncertainty` object if it is one, otherwise returns zero."""
     # Is an Uncertainty
     if hasattr(x, "_err"):

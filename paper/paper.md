@@ -115,9 +115,18 @@ seq = Uncertainty.from_sequence([u1, u2])
 print(seq)  # [5.25 +/- 0.75, 1.85 +/- 0.4]
 ```
 
-==============================================
-- TODO: Clarify difference between ScalarUncertainty and VectorUncertainty / how they interact.
-==============================================
+The `Uncertainty` class relies on two subclasses for its full implementation: `ScalarUncertainty` and 
+`VectorUncertainty`. The former is instantiated whenever the programmer uses scalar data types when declaring 
+an `Uncertainty` object, whereas the latter is instantiated whenever `NumPy` arrays are used. In general, 
+`VectorUncertainty` objects support most operations that standard `NumPy` arrays support, whereas 
+`ScalarUncertainty` objects support only scalar operations. `AutoUncertainties` automatically decides which 
+subclass is appropriate, given a user's input. 
+
+It is important to note that `VectorUncertainty` objects are not equivalent to arrays or lists of 
+`ScalarUncertainty` objects. Although indexing into a `VectorUncertainty` will return a `ScalarUncertainty`, 
+programmers should be aware that the `ScalarUncertainty` is constructed spontaneously from an underlying
+`NumPy` array upon request. This allows for vectorized operations on `VectorUncertainty` objects, which
+perform significantly better than executing individual operations on a sequence of `ScalarUncertainty` objects.
 
 To extract errors / central values from arbitrary objects, the accessors `nominal_values` and `std_devs` are provided. 
 These functions return:
