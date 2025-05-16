@@ -6,8 +6,7 @@ from . import uncertainty
 from . import util
 
 from .display_format import (
-    ScalarDisplay,
-    VectorDisplay,
+    UncertaintyDisplay,
     set_display_rounding,
 )
 from .exceptions import (
@@ -35,12 +34,11 @@ __all__ = [
     "DowncastError",
     "DowncastWarning",
     "NegativeStdDevError",
-    "ScalarDisplay",
     "UType",
     "Uncertainty",
     "UncertaintyArray",
+    "UncertaintyDisplay",
     "UncertaintyDtype",
-    "VectorDisplay",
     "display_format",
     "exceptions",
     "nominal_values",

@@ -19,7 +19,7 @@ import warnings
 import numpy as np
 import numpy.typing as npt
 
-from auto_uncertainties import DowncastError, DowncastWarning
+from auto_uncertainties import DowncastError, DowncastWarning, UncertaintyDisplay
 from auto_uncertainties.numpy import HANDLED_FUNCTIONS, HANDLED_UFUNCS, wrap_numpy
 from auto_uncertainties.util import ignore_runtime_warnings
 
@@ -31,6 +31,7 @@ ERROR_ON_DOWNCAST = False
 COMPARE_RTOL = 1e-9
 
 __all__ = [
+    "UType",
     "Uncertainty",
     "nominal_values",
     "set_compare_error",
@@ -48,7 +49,7 @@ ValT: TypeAlias = "ScalarT | SupportedSequence | Uncertainty | npt.NDArray[np.nu
 ErrT: TypeAlias = ScalarT | Sequence[ScalarT] | npt.NDArray[np.number]
 
 
-class Uncertainty(Generic[T]):
+class Uncertainty(Generic[T], UncertaintyDisplay):
     """
     Base class for `Uncertainty` objects.
 
@@ -83,9 +84,6 @@ class Uncertainty(Generic[T]):
 
     _nom: T
     _err: T
-    _is_vector: bool
-
-    # TODO: DEAL WITH DISPLAY FORMAT AS WELL -- NOT CURRENTLY IMPLEMENTED!
 
     # List of __init__ overloads for static type checking.
     @overload
@@ -259,7 +257,7 @@ class Uncertainty(Generic[T]):
     @property
     def is_vector(self) -> bool:
         """Whether the current object is a vector uncertainty."""
-        return self._is_vector
+        return isinstance(self._nom, np.ndarray) and isinstance(self._err, np.ndarray)
 
     @property
     def value(self) -> T:
