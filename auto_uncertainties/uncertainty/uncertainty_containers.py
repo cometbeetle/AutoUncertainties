@@ -264,8 +264,6 @@ class Uncertainty(Generic[T], UncertaintyDisplay):
                     else caster(0.0),
                 )
 
-            self._is_vector = False
-
         # TODO: Deal with edge cases where dunder methods convert float to int (or other things)...
 
         else:
@@ -341,7 +339,6 @@ class Uncertainty(Generic[T], UncertaintyDisplay):
 
         self._nom = cast(T, value)
         self._err = cast(T, error)
-        self._is_vector = True
 
     @property
     def is_vector(self) -> bool:
