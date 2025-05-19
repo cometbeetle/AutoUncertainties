@@ -523,6 +523,18 @@ class TestUncertainty:
         result = Uncertainty.from_sequence(seq)
         assert result.units == Unit("radian")
 
+        # Test with sequence of errors
+        seq_v = [Quantity(2, "degree"), Quantity(4, "radian")]
+        seq_e = [Quantity(2, "radian"), Quantity(6, "degree")]
+        result = Uncertainty(seq_v, seq_e)
+        assert result.units == Unit("degree")
+
+        # Case where value has no units, error has units.
+        seq_v = [10.25, 40.5]
+        seq_e = [Quantity(2, "radian"), Quantity(6, "degree")]
+        result = Uncertainty(seq_v, seq_e)
+        assert result.units == Unit("radian")
+
     @staticmethod
     @given(
         v1=st.floats(**general_float_strategy),

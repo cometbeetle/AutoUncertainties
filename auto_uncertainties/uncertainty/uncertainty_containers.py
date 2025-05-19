@@ -189,11 +189,19 @@ class Uncertainty(Generic[T], UncertaintyDisplay):
         value: Uncertainty[npt.NDArray[np.floating]],
     ): ...
     @overload
+    def __init__(
+        self,
+        value: PlainQuantity | Sequence[PlainQuantity] | ValT,
+        error: PlainQuantity | Sequence[PlainQuantity] | ErrT | None = None,
+    ): ...
+    @overload
     def __init__(self: Self, value: T, error: ErrT | None = None): ...
     @overload
     def __init__(self: Self, value: ValT, error: ErrT | None = None) -> None: ...
     @overload
-    def __init__(self, value, error=None, skip: bool = True) -> None: ...
+    def __init__(
+        self: Self, value: ValT, error: ErrT | None = None, skip: bool = True
+    ) -> None: ...
 
     def __init__(self, value, error=None, skip=True) -> None:
         if skip:
@@ -928,7 +936,7 @@ class Uncertainty(Generic[T], UncertaintyDisplay):
         else:
             raise NotImplementedError
 
-    def copy(self) -> Uncertainty[T]:
+    def copy(self) -> Self:
         """
         Return a copy of the `Uncertainty` object.
 
