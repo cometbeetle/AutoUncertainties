@@ -191,17 +191,22 @@ class Uncertainty(Generic[T], UncertaintyDisplay):
     @overload
     def __init__(
         self,
-        value: PlainQuantity | Sequence[PlainQuantity] | ValT,
+        value: PlainQuantity | Sequence[PlainQuantity],
         error: PlainQuantity | Sequence[PlainQuantity] | ErrT | None = None,
+    ): ...
+    @overload
+    def __init__(
+        self,
+        value: ValT,
+        error: PlainQuantity | Sequence[PlainQuantity],
     ): ...
     @overload
     def __init__(self: Self, value: T, error: ErrT | None = None): ...
     @overload
-    def __init__(self: Self, value: ValT, error: ErrT | None = None) -> None: ...
-    @overload
-    def __init__(
-        self: Self, value: ValT, error: ErrT | None = None, skip: bool = True
-    ) -> None: ...
+    def __init__(self, value, error=None, skip: bool = True) -> None: ...
+
+    # TODO: Issue here: should not have untyped parameters, but it gets upset if we add ValT and ErrT in...
+    # TODO: Go over this and make sure it makes sense.
 
     def __init__(self, value, error=None, skip=True) -> None:
         if skip:
@@ -405,7 +410,7 @@ class Uncertainty(Generic[T], UncertaintyDisplay):
         except OverflowError:
             return cast(T, float("inf") if isinstance(self._err, float) else np.inf)
 
-    def plus_minus(self, error: T) -> Uncertainty[T]:
+    def plus_minus(self, error: UType) -> Uncertainty[T]:
         """
         Add an error to the `Uncertainty` object.
 
@@ -533,10 +538,10 @@ class Uncertainty(Generic[T], UncertaintyDisplay):
     def __getnewargs__(self) -> tuple[T, T]:
         return self._nom, self._err
 
-    def __copy__(self) -> Self:
+    def __copy__(self) -> Uncertainty[T]:
         return self.__class__(copy.copy(self._nom), copy.copy(self._err))
 
-    def __deepcopy__(self, memo) -> Self:
+    def __deepcopy__(self, memo) -> Uncertainty[T]:
         return self.__class__(
             copy.deepcopy(self._nom, memo), copy.deepcopy(self._err, memo)
         )
@@ -876,7 +881,7 @@ class Uncertainty(Generic[T], UncertaintyDisplay):
 
     __array_priority__ = 18
 
-    def clip(self, *args, **kwargs) -> Self:
+    def clip(self, *args, **kwargs) -> Uncertainty[T]:
         """
         NumPy `~numpy.ndarray.clip` implementation.
 
@@ -934,7 +939,7 @@ class Uncertainty(Generic[T], UncertaintyDisplay):
         else:
             raise NotImplementedError
 
-    def copy(self) -> Self:
+    def copy(self) -> Uncertainty[T]:
         """
         Return a copy of the `Uncertainty` object.
 
