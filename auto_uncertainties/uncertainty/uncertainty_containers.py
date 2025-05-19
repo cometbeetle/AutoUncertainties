@@ -102,7 +102,7 @@ class Uncertainty(Generic[T], UncertaintyDisplay):
          is exactly as described in the `from_quantities` method.
 
        * If an `Uncertainty` is supplied for ``value``, its ``error`` attribute will
-         override any ``error`` argument (if it is supplied).
+         always override any ``error`` argument (if it is supplied).
 
        * If the ``value`` parameter is `~numpy.nan`, returns `~numpy.nan` (raw float value).
 
@@ -293,26 +293,26 @@ class Uncertainty(Generic[T], UncertaintyDisplay):
         val = np.empty(len(value), dtype=np.float64)
         err = np.empty(len(value), dtype=np.float64)
 
-        # Sequence of Uncertainties
-        if len(value) > 0 and isinstance(value[0], Uncertainty):
-            for i, u in enumerate(value):
-                if not isinstance(u, Uncertainty) or u.is_vector:
-                    msg = f"Cannot create a vector uncertainty from this sequence (expected Uncertainty, got {type(u)} instead)"
-                    raise ValueError(msg)
-                val[i] = u.value
-                err[i] = u.error
-
-        elif len(value) > 0:
+        if len(value) > 0:
             error = 0.0 if error is None else error
             reshaped_error = (
-                (np.ones(len(value)) * error) if isinstance(error, ScalarT) else error
+                (np.ones(len(value), dtype=np.float64) * error)
+                if isinstance(error, ScalarT)
+                else error
             )
             for i, v in enumerate(value):
-                if not isinstance(v, ScalarT):
-                    msg = f"Cannot create a vector uncertainty from this sequence (expected scalar, got {type(v)} instead)"
+                if isinstance(v, Uncertainty):
+                    val[i] = v.value
+                    err[i] = v.error
+                elif isinstance(v, ScalarT):
+                    val[i] = v
+                    if not isinstance(reshaped_error[i], ScalarT):
+                        msg = f"Error sequence must be of scalars (found element of type {type(err[i])} instead)"
+                        raise ValueError(msg)
+                    err[i] = reshaped_error[i]
+                else:
+                    msg = f"Value sequence must be of scalars or Uncertainty objects (found element of type {type(v)} instead)"
                     raise ValueError(msg)
-                val[i] = v
-                err[i] = reshaped_error[i]
 
         self.__init__(cast(T, val), err, skip=False)
 
@@ -420,8 +420,6 @@ class Uncertainty(Generic[T], UncertaintyDisplay):
         # Check if float, NumPy float, or NumPy array.
         if isinstance(self._err, float):
             new_err = cast(T, float(result))
-        elif isinstance(self._err, np.floating):
-            new_err = cast(T, result)
         else:
             new_err = cast(T, result)
 

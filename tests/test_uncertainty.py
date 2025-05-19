@@ -403,8 +403,12 @@ class TestUncertainty:
         scalar = Uncertainty(2, 3)
         vector = Uncertainty(np.array([1, 2, 3]), np.array([4, 5, 6]))
         fake_vector = Uncertainty(np.array(3), np.array(4))
-        assert isinstance(scalar, ScalarUncertainty)  # verify scalar type was chosen
-        assert isinstance(vector, VectorUncertainty)  # verify vector type was chosen
+        assert isinstance(
+            scalar, ScalarUncertainty
+        )  # verify scalar type was chosen (DEPRECATED)
+        assert isinstance(
+            vector, VectorUncertainty
+        )  # verify vector type was chosen (DEPRECATED)
         assert isinstance(
             fake_vector, ScalarUncertainty
         )  # verify zero-D vectors become scalars
@@ -436,9 +440,23 @@ class TestUncertainty:
         assert isinstance(from_quant.m, Uncertainty)
         assert from_quant.units == Unit("radian")
 
-        # Check error is raised when a negative value is found in the err array
-        with pytest.raises(NegativeStdDevError):
-            _ = Uncertainty(np.array([1, 2, 3]), np.array([-1, 2, 3]))
+    @pytest.mark.parametrize(
+        "val, err, exception",
+        [
+            ([1, 2, 3], np.array([1, 2, 3]), ValueError),
+            (np.array([1, 2, 3]), [1, 2, 3], ValueError),
+            (2.5, [1, 2, 3], ValueError),
+            (({"bad_type": True}), None, TypeError),
+            (np.array([1, 2, 3]), np.array([1, 2]), ValueError),
+            ([1, 2, 3], [1, 2], ValueError),
+            (np.array([1, 2, 3]), np.array([-1, 2, 3]), NegativeStdDevError),
+            ([Uncertainty(1, 0.5), {"bad_data": True}], None, ValueError),
+            ([1, 2, 3], [1, 2, Uncertainty(0.5, 0.25)], ValueError),
+        ],
+    )
+    def test_init_exceptions(self, val, err, exception):
+        with pytest.raises(exception):
+            _ = Uncertainty(val, err)
 
     @staticmethod
     def test_copy():
@@ -477,6 +495,17 @@ class TestUncertainty:
 
         assert u.value == val
         assert u.error == np.sqrt(err**2 + pm**2)
+
+    def test_plus_minus_dtype(self):
+        u = Uncertainty(np.float32(1.5), np.float32(0.5))
+        result = u.plus_minus(25)
+        assert np.isclose(result.error, 25.005)
+        assert type(result.error) == np.float32
+
+        u = Uncertainty(1.5, 0.5)
+        result = u.plus_minus(25)
+        assert np.isclose(result.error, 25.005)
+        assert type(result.error) == float
 
     @staticmethod
     @pytest.mark.parametrize(
@@ -534,6 +563,11 @@ class TestUncertainty:
         seq_e = [Quantity(2, "radian"), Quantity(6, "degree")]
         result = Uncertainty(seq_v, seq_e)
         assert result.units == Unit("radian")
+
+        # Mixed sequence of Uncertainties and scalars.
+        u = Uncertainty([10.25, Uncertainty(1, 0.4), 0.5])
+        assert u.value.all() == np.array([10.25, 1.0, 0.5]).all()
+        assert u.error.all() == np.array([0.0, 0.4, 0.0]).all()
 
     @staticmethod
     @given(
