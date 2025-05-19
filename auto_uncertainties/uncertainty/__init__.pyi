@@ -3,6 +3,8 @@ from . import uncertainty_containers
 from .uncertainty_containers import (
     UType,
     Uncertainty,
+    VectorUncertainty,
+    ScalarUncertainty,
     nominal_values,
     set_compare_error,
     set_downcast_error,
@@ -10,8 +12,10 @@ from .uncertainty_containers import (
 )
 
 __all__ = [
+    "ScalarUncertainty",
     "UType",
     "Uncertainty",
+    "VectorUncertainty",
     "nominal_values",
     "set_compare_error",
     "set_downcast_error",
