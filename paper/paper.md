@@ -95,8 +95,6 @@ important are:
 - `error -> float`: The error of the object.
 - `relative -> float`: The relative error (i.e. error / value) of the object.
 - `plus_minus(self, err: float) -> Uncertainty`: Adds error (in quadrature).
-- `from_sequence(cls, seq: Sequence) -> VectorUncertainty`: Constructs an array `Uncertainty` object 
-  from some existing sequence.
 
 These attributes and methods can be used in the following manner:
 
@@ -111,22 +109,16 @@ print(u1.error)            # 0.75
 print(u1.relative)         # 0.142857
 print(u1.plus_minus(0.5))  # 5.25 +/- 0.901388
 
-seq = Uncertainty.from_sequence([u1, u2])
-print(seq)  # [5.25 +/- 0.75, 1.85 +/- 0.4]
+# Construct a vector `Uncertainty` from a sequence.
+seq = Uncertainty([u1, u2]) 
+print(seq.value)  # [5.25 1.85]
+print(seq.error)  # [0.75 0.4 ]
 ```
 
-The `Uncertainty` class relies on two subclasses for its full implementation: `ScalarUncertainty` and 
-`VectorUncertainty`. The former is instantiated whenever the programmer uses scalar data types when declaring 
-an `Uncertainty` object, whereas the latter is instantiated whenever `NumPy` arrays are used. In general, 
-`VectorUncertainty` objects support most operations that standard `NumPy` arrays support, whereas 
-`ScalarUncertainty` objects support only scalar operations. `AutoUncertainties` automatically decides which 
-subclass is appropriate, given a user's input. 
-
-It is important to note that `VectorUncertainty` objects are not equivalent to arrays or lists of 
-`ScalarUncertainty` objects. Although indexing into a `VectorUncertainty` will return a `ScalarUncertainty`, 
-programmers should be aware that the `ScalarUncertainty` is constructed spontaneously from an underlying
-`NumPy` array upon request. This allows for vectorized operations on `VectorUncertainty` objects, which
-perform significantly better than executing individual operations on a sequence of `ScalarUncertainty` objects.
+The `Uncertainty` class automatically determines which methods should be implemented based on 
+whether it represents a vector uncertainty, or a scalar uncertainty. When instantiated with a
+sequence or `NumPy` array, vector-based operations are enabled; when instantiated with scalars,
+only scalar operations are permitted. 
 
 
 ## Support for Pint

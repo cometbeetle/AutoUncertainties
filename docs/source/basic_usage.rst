@@ -24,26 +24,10 @@ The goal is to have minimal changes to your code in order to enable uncertainty 
      >>> error = np.ones_like(value)*0.1
      >>> u = Uncertainty(value, error)
 
-  - (though, they are actually different classes!)
-
-    .. code-block:: python
-
-       >>> from auto_uncertainties import Uncertainty
-       >>> value = 1.0
-       >>> error = 0.1
-       >>> u = Uncertainty(value, error)
-       >>> type(u)
-       <class 'auto_uncertainties.uncertainty.uncertainty_containers.ScalarUncertainty'>
-
-    .. code-blocK:: python
-
-       >>> from auto_uncertainties import Uncertainty
-       >>> import numpy as np
-       >>> value = np.linspace(start=0, stop=10, num=5)
-       >>> error = np.ones_like(value)*0.1
-       >>> u = Uncertainty(value, error)
-       >>> type(u)
-       <class 'auto_uncertainties.uncertainty.uncertainty_containers.VectorUncertainty'>
+  The `~auto_uncertainties.uncertainty.uncertainty_containers.Uncertainty` class automatically determines
+  which methods should be implemented based on whether it represents a vector uncertainty, or a scalar
+  uncertainty. When instantiated with a sequence or `numpy` array, vector-based operations are enabled;
+  when instantiated with scalars, only scalar operations are permitted.
 
 * Scalar uncertainties implement all mathematical and logical
   `dunder methods <https://docs.python.org/3/reference/datamodel.html#object.__repr__>`_ explicitly using linear

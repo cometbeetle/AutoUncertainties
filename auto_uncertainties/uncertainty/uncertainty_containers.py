@@ -76,6 +76,11 @@ class Uncertainty(Generic[T], UncertaintyDisplay):
     Parameters can be numbers, sequences, `numpy` arrays, `pint.Quantity` objects,
     other `Uncertainty` objects, or lists / tuples of `Uncertainty` objects.
 
+    The `Uncertainty` class automatically determines which methods should be implemented based on
+    whether it represents a vector uncertainty, or a scalar uncertainty. When instantiated with a
+    sequence or `numpy` array, vector-based operations are enabled; when instantiated with scalars,
+    only scalar operations are permitted.
+
     `Uncertainty` objects only support float-based data types. If integers or
     integer arrays are passed as parameters to the `Uncertainty` constructor,
     they will be cast to `float` (or `numpy.float64` if a `numpy.integer` subclass
