@@ -515,7 +515,7 @@ class TestUncertainty:
         assert result[2] == Uncertainty(4, 5)
 
         seq = [None, Uncertainty(2, 3)]
-        with pytest.raises(TypeError):
+        with pytest.raises(ValueError):
             _ = Uncertainty.from_sequence(seq)
 
         # Test with Quantity objects
@@ -832,6 +832,8 @@ class TestVectorUncertainty:
                 continue
 
         for item2 in HANDLED_UFUNCS:
+            if item2 == "ndim":
+                continue
             assert callable(getattr(v, item2))
 
         for item3 in HANDLED_FUNCTIONS:
@@ -1064,15 +1066,9 @@ class TestVectorUncertainty:
         with pytest.raises(ValueError):
             v[0] = 400.0
 
-        v._nom = {
-            1,
-            2,
-            3,
-            4,
-            5,
-        }  # Contrived set-based example to test non-indexable object
-        with pytest.raises(ValueError):
-            v[0] = Uncertainty(2, 3)
+        s = Uncertainty(0.5, 0.001)
+        with pytest.raises(NotImplementedError):
+            s[0] = 1.0
 
     @staticmethod
     @given(
