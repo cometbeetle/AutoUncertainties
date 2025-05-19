@@ -17,7 +17,7 @@ def ignore_runtime_warnings(f):
     """
     A decorator to ignore runtime warnings.
 
-    :param f: The functin to wrap
+    :param f: The function to wrap
 
     :return: The wrapped function
     """
@@ -47,6 +47,27 @@ def ignore_numpy_downcast_warnings(f):
             return f(*args, **kwargs)
 
     return user_warn_inner
+
+
+def deprecated(reason="", category=DeprecationWarning):
+    """
+    Raise a deprecation warning for a decorated function.
+
+    :param reason: Why the deprecation is being issued
+    :param category: The type of warning to issue
+    """
+
+    def decorator(func):
+        msg = f"{func.__name__} is deprecated" + f" ({reason})." if reason else "."
+
+        @wraps(func)
+        def wrapper(*args, **kwargs):
+            warnings.warn(msg, category, stacklevel=2)
+            return func(*args, **kwargs)
+
+        return wrapper
+
+    return decorator
 
 
 def is_iterable(y):

@@ -8,11 +8,17 @@ import pytest
 from auto_uncertainties.display_format import (
     PDG_precision,
     ScalarDisplay,
+    UncertaintyDisplay,
     VectorDisplay,
     first_digit,
     pdg_round,
     set_display_rounding,
 )
+
+
+def test_legacy_classes():
+    assert VectorDisplay is UncertaintyDisplay
+    assert ScalarDisplay is UncertaintyDisplay
 
 
 class TestVectorDisplay:

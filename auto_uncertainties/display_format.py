@@ -8,7 +8,12 @@ import numpy.typing as npt
 
 ROUND_ON_DISPLAY = False
 
-__all__ = ["UncertaintyDisplay", "set_display_rounding"]
+__all__ = [
+    "ScalarDisplay",
+    "UncertaintyDisplay",
+    "VectorDisplay",
+    "set_display_rounding",
+]
 
 
 def set_display_rounding(val: bool):
@@ -109,6 +114,11 @@ class UncertaintyDisplay:
 
     def __repr__(self) -> str:
         return str(self)
+
+
+# Kept for compatibility.
+ScalarDisplay = UncertaintyDisplay
+VectorDisplay = UncertaintyDisplay
 
 
 # From https://github.com/lmfit/uncertainties/blob/master/uncertainties/core.py

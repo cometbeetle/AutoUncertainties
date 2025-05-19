@@ -30,7 +30,7 @@ from auto_uncertainties import (
     UncertaintyDisplay,
 )
 from auto_uncertainties.numpy import HANDLED_FUNCTIONS, HANDLED_UFUNCS, wrap_numpy
-from auto_uncertainties.util import ignore_runtime_warnings
+from auto_uncertainties.util import deprecated, ignore_runtime_warnings
 
 if TYPE_CHECKING:
     from pint.facets.plain import PlainQuantity
@@ -54,18 +54,27 @@ T = TypeVar("T", float, np.floating, npt.NDArray[np.floating])
 """`TypeVar` specifying the underlying data types supporting `Uncertainty` objects."""
 
 UType: TypeAlias = float | np.floating | npt.NDArray[np.floating]
+"""Type alias for the underlying data types supporting `Uncertainty` objects."""
+
 ScalarT: TypeAlias = int | float | np.number
+"""Scalar types used throughout AutoUncertainties."""
+
 SupportedSequence: TypeAlias = "Sequence[ScalarT] | Sequence[Uncertainty[float]] | Sequence[Uncertainty[np.floating]]"
+"""Sequences supported by the `Uncertainty` constructor."""
+
 ValT: TypeAlias = "ScalarT | SupportedSequence | Uncertainty | npt.NDArray[np.number]"
+"""Types supported in the ``value`` parameter of the `Uncertainty` constructor."""
+
 ErrT: TypeAlias = ScalarT | Sequence[ScalarT] | npt.NDArray[np.number]
+"""Types supported in the ``error`` parameter of the `Uncertainty` constructor."""
 
 
 class Uncertainty(Generic[T], UncertaintyDisplay):
     """
-    Base class for `Uncertainty` objects.
+    Representation of a central value and its associated uncertainty.
 
-    Parameters can be numbers, `numpy` arrays, other `Uncertainty` objects, or
-    lists / tuples of `Uncertainty` objects.
+    Parameters can be numbers, sequences, `numpy` arrays, `pint.Quantity` objects,
+    other `Uncertainty` objects, or lists / tuples of `Uncertainty` objects.
 
     `Uncertainty` objects only support float-based data types. If integers or
     integer arrays are passed as parameters to the `Uncertainty` constructor,
@@ -81,12 +90,16 @@ class Uncertainty(Generic[T], UncertaintyDisplay):
 
     .. note::
 
+       * If sequences (not NumPy arrays) are supplied for ``value`` and ``error``,
+         their numeric values will always be converted to `numpy.float64`.
+
+       * If `pint.Quantity` objects are supplied for either parameter, the behavior
+         is exactly as described in the `from_quantities` method.
+
        * If an `Uncertainty` is supplied for ``value``, its ``error`` attribute will
          override any ``error`` argument (if it is supplied).
 
-       * If the ``value`` parameter is `~np.nan`, returns `~np.nan` (raw `float` value).
-         TODO: ^^^ NOT IMPLEMENTED ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-         TODO: Ask Varchas if that's necessary to have as a feature.
+       * If the ``value`` parameter is `~numpy.nan`, returns `~numpy.nan` (raw float value).
 
     .. seealso::
 
@@ -96,8 +109,13 @@ class Uncertainty(Generic[T], UncertaintyDisplay):
     _nom: T
     _err: T
 
-    # Intercepts Pint Quantity inputs and sequences of Quantity objects.
-    def __new__(cls, value, error=None):
+    # Intercepts non-finite values, Pint Quantity inputs, and sequences of Quantity objects.
+    def __new__(cls, value, error=None) -> Uncertainty[T]:
+        # Return NaN if value is NaN.
+        if isinstance(value, ScalarT) and not np.isfinite(value):
+            return np.nan  # type: ignore
+
+        # Use from_quantities if one or more Pint Quantity objects were supplied.
         if _check_units(value, error)[2] is not None:
             return cls.from_quantities(value, error)
 
@@ -226,7 +244,12 @@ class Uncertainty(Generic[T], UncertaintyDisplay):
             caster = np.float64 if isinstance(value, np.number) else float
             if isinstance(value, (int, np.integer)):
                 self._nom = cast(T, caster(value))
-                self._err = cast(T, caster(error) if error is not None else caster(0.0))
+                self._err = cast(
+                    T,
+                    caster(error)
+                    if (error is not None and np.isfinite(error))
+                    else caster(0.0),
+                )
             else:
                 caster = (
                     (lambda x: x)
@@ -234,13 +257,15 @@ class Uncertainty(Generic[T], UncertaintyDisplay):
                     else caster
                 )
                 self._nom = cast(T, value)
-                self._err = cast(T, caster(error) if error is not None else caster(0.0))
+                self._err = cast(
+                    T,
+                    caster(error)
+                    if (error is not None and np.isfinite(error))
+                    else caster(0.0),
+                )
 
             self._is_vector = False
 
-        # TODO: NOTE THAT NaN case is not handled yet!
-        # TODO: Should infinite errors be set to zero?
-        # TODO: Issue with unreliable test timings.
         # TODO: Deal with edge cases where dunder methods convert float to int (or other things)...
 
         else:
@@ -254,7 +279,6 @@ class Uncertainty(Generic[T], UncertaintyDisplay):
             msg = f"Error sequence must be the same length as value sequence (got len(value)={len(value)}, len(error)={len(error)})"
             raise ValueError(msg)
 
-        # TODO: Note that this always converts to np.float64
         val = np.empty(len(value), dtype=np.float64)
         err = np.empty(len(value), dtype=np.float64)
 
@@ -466,22 +490,30 @@ class Uncertainty(Generic[T], UncertaintyDisplay):
         return instance
 
     @classmethod
+    @deprecated("call Uncertainty() directly instead")
     def from_sequence(cls, value: ValT, error: ErrT | None = None) -> Uncertainty:
         """
         Legacy classmethod for compatibility. Simply calls `__init__`.
 
         .. warning::
 
-           Static type inference is hindered when using this method.
+           This method is deprecated. Static type inference is hindered when using this method.
 
            It is better to call ``Uncertainty(value, error)`` instead.
         """
         return cls(value, error)
 
     @classmethod
+    @deprecated("call Uncertainty() directly instead")
     def from_list(cls, value: ValT, error: ErrT | None = None) -> Uncertainty:
-        """Alias for `from_sequence`."""
-        return cls.from_sequence(value, error)
+        """
+        Alias for `from_sequence`.
+
+        .. warning::
+
+           This method is deprecated.
+        """
+        return cls(value, error)
 
     def __getstate__(self) -> dict[str, T]:
         return {"nominal_value": self._nom, "std_devs": self._err}
@@ -836,11 +868,9 @@ class Uncertainty(Generic[T], UncertaintyDisplay):
 
     __array_priority__ = 18
 
-    def clip(self, min=None, max=None, out=None, **kwargs) -> Self:
+    def clip(self, *args, **kwargs) -> Self:
         """
         NumPy `~numpy.ndarray.clip` implementation.
-
-        TODO: Fix this to avoid type issues!
 
         :param min:
         :param max:
@@ -851,9 +881,7 @@ class Uncertainty(Generic[T], UncertaintyDisplay):
            Implemented only for vector uncertainty objects.
         """
         if isinstance(self._nom, np.ndarray):
-            return self.__class__(
-                self._nom.clip(min=min, max=max, out=out, **kwargs), self._err
-            )
+            return self.__class__(self._nom.clip(*args, **kwargs), self._err)
         else:
             return NotImplemented
 
