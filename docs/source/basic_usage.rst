@@ -108,9 +108,15 @@ The goal is to have minimal changes to your code in order to enable uncertainty 
      >>> np.sum(u)
      25 +/- 0.223607
 
+   If enabled, the PDG rounding rules will, in general, cause `Uncertainty` objects to be displayed with:
+   
+   - Error to 2 significant digits.
+   - Central value to first signficant digit of error, or two significant figures (whichever is more 
+     significant digits).
+
 * If `numpy.array` is called on an `~auto_uncertainties.uncertainty.uncertainty_containers.Uncertainty` object, it will
-  automatically get cast down to a `numpy` array (and lose uncertainty information!), and emit a warning.
-  To make this an error, use `~auto_uncertainties.uncertainty.uncertainty_containers.set_downcast_error`:
+  automatically get cast down to a `numpy` array (losing all uncertainty information!), and emit a warning.
+  To force an exception to be raised instead, use `~auto_uncertainties.uncertainty.uncertainty_containers.set_downcast_error`:
 
   .. code-block:: python
 

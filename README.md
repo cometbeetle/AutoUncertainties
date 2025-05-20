@@ -144,8 +144,8 @@ At the moment, it makes sense to disable the Pandas tests until certain features
   ```
 
 * Displayed values are automatically rounded according to the `g` format specifier. To enable
-  rounding consistent with the Particle Data Group (PDG) standard, the `set_display_format` 
-  function can be called as follows::
+  rounding consistent with the Particle Data Group (PDG) standard, the `set_display_rounding` 
+  function can be called as follows:
 
   ```python
   >>> from auto_uncertainties import Uncertainty, set_display_rounding
@@ -161,8 +161,14 @@ At the moment, it makes sense to disable the Pandas tests until certain features
   25 +/- 0.223607
   ```
 
-* If `numpy.array` is called on an `Uncertainty` object, it will automatically get cast down to a numpy array (and lose 
-  uncertainty information!), and emit a warning. To make this an error, use `set_downcast_error`:
+  If enabled, the PDG rounding rules will, in general, cause `Uncertainty` objects to be displayed with:
+    - Error to 2 significant digits.
+    - Central value to first signficant digit of error, or two significant figures (whichever is more 
+      significant digits).
+
+* If `numpy.array` is called on an `Uncertainty` object, it will automatically get cast down to a 
+  numpy array (losing all uncertainty information!), and emit a warning. To force an exception to be raised
+  instead, use `set_downcast_error`:
 
   ```python
   >>> from auto_uncertainties import Uncertainty, set_downcast_error
