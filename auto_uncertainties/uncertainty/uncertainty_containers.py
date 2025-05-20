@@ -59,7 +59,9 @@ UType: TypeAlias = float | np.floating | npt.NDArray[np.floating]
 ScalarT: TypeAlias = int | float | np.number
 """Scalar types used throughout AutoUncertainties."""
 
-SupportedSequence: TypeAlias = "Sequence[ScalarT] | Sequence[Uncertainty[float]] | Sequence[Uncertainty[np.floating]]"
+SupportedSequence: TypeAlias = (
+    "Sequence[ScalarT | Uncertainty[float] | Uncertainty[np.floating]]"
+)
 """Sequences supported by the `Uncertainty` constructor."""
 
 ValT: TypeAlias = "ScalarT | SupportedSequence | Uncertainty | npt.NDArray[np.number]"
@@ -171,13 +173,8 @@ class Uncertainty(Generic[T], UncertaintyDisplay):
     @overload
     def __init__(
         self: Uncertainty[npt.NDArray[np.floating]],
-        value: npt.NDArray[np.integer] | Sequence[ScalarT],
+        value: npt.NDArray[np.integer] | SupportedSequence,
         error: ErrT | None = None,
-    ): ...
-    @overload
-    def __init__(
-        self: Uncertainty[npt.NDArray[np.floating]],
-        value: Sequence[Uncertainty[float]] | Sequence[Uncertainty[np.floating]],
     ): ...
     @overload
     def __init__(self: Uncertainty[float], value: Uncertainty[float]): ...
@@ -203,10 +200,11 @@ class Uncertainty(Generic[T], UncertaintyDisplay):
     @overload
     def __init__(self: Self, value: T, error: ErrT | None = None): ...
     @overload
-    def __init__(self, value, error=None, skip: bool = True) -> None: ...
+    def __init__(self, value: ValT, error: ErrT | None = None, skip: bool = True): ...
 
     # TODO: Issue here: should not have untyped parameters, but it gets upset if we add ValT and ErrT in...
     # TODO: Go over this and make sure it makes sense.
+    # TODO: NOTE: this may now be fixed!
 
     def __init__(self, value, error=None, skip=True) -> None:
         if skip:
