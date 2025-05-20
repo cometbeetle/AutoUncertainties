@@ -92,6 +92,8 @@ class Uncertainty(Generic[T], UncertaintyDisplay):
     :param error: The uncertainty value(s). Zero if not provided.
 
     :raise NegativeStdDevError: If ``err`` is negative, or contains negative values
+    :raise TypeError: If the parameters are of incompatible types
+    :raise ValueError: If the parameters have incomaptible values (e.g., misaligned array sizes)
 
     :return: An initialized `Uncertainty` object
 
@@ -156,8 +158,6 @@ class Uncertainty(Generic[T], UncertaintyDisplay):
                     for item in error
                 ]
 
-        # TODO: add useful error messages when things go wrong here + add unit tests for all cases
-
         instance = super().__new__(cls)
         instance.__init__(value, error, skip=False)
         units = mag_units if mag_units is not None else err_units
@@ -201,10 +201,6 @@ class Uncertainty(Generic[T], UncertaintyDisplay):
     def __init__(self: Self, value: T, error: ErrT | None = None): ...
     @overload
     def __init__(self, value: ValT, error: ErrT | None = None, skip: bool = True): ...
-
-    # TODO: Issue here: should not have untyped parameters, but it gets upset if we add ValT and ErrT in...
-    # TODO: Go over this and make sure it makes sense.
-    # TODO: NOTE: this may now be fixed!
 
     def __init__(self, value, error=None, skip=True) -> None:
         if skip:
@@ -1161,8 +1157,11 @@ class Uncertainty(Generic[T], UncertaintyDisplay):
 
 
 VectorUncertainty = Uncertainty
+"""Alias for `Uncertainty` to maintain backward compatibility."""
+
+
 ScalarUncertainty = Uncertainty
-# TODO: Determine whether this should stay here.
+"""Alias for `Uncertainty` to maintain backward compatibility."""
 
 
 def nominal_values(x: Any) -> UType | Any:
