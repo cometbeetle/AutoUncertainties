@@ -443,15 +443,15 @@ class TestUncertainty:
     @pytest.mark.parametrize(
         "val, err, exception",
         [
-            ([1, 2, 3], np.array([1, 2, 3]), ValueError),
-            (np.array([1, 2, 3]), [1, 2, 3], ValueError),
-            (2.5, [1, 2, 3], ValueError),
+            ([1, 2, 3], np.array([1, 2, 3]), TypeError),
+            (np.array([1, 2, 3]), [1, 2, 3], TypeError),
+            (2.5, [1, 2, 3], TypeError),
             (({"bad_type": True}), None, TypeError),
             (np.array([1, 2, 3]), np.array([1, 2]), ValueError),
             ([1, 2, 3], [1, 2], ValueError),
             (np.array([1, 2, 3]), np.array([-1, 2, 3]), NegativeStdDevError),
-            ([Uncertainty(1, 0.5), {"bad_data": True}], None, ValueError),
-            ([1, 2, 3], [1, 2, Uncertainty(0.5, 0.25)], ValueError),
+            ([Uncertainty(1, 0.5), {"bad_data": True}], None, TypeError),
+            ([1, 2, 3], [1, 2, Uncertainty(0.5, 0.25)], TypeError),
         ],
     )
     def test_init_exceptions(self, val, err, exception):
@@ -544,7 +544,7 @@ class TestUncertainty:
         assert result[2] == Uncertainty(4, 5)
 
         seq = [None, Uncertainty(2, 3)]
-        with pytest.raises(ValueError):
+        with pytest.raises(TypeError):
             _ = Uncertainty.from_sequence(seq)
 
         # Test with Quantity objects
@@ -1106,15 +1106,11 @@ class TestVectorUncertainty:
         assert v[0] == Uncertainty(400.0, 100.0)
 
         # Check NaN case
-        v[0] = np.nan
+        v[0] = np.nan  # type: ignore
         assert np.isnan(v[0])
 
-        with pytest.raises(ValueError):
-            v[0] = 400.0
-
-        s = Uncertainty(0.5, 0.001)
-        with pytest.raises(NotImplementedError):
-            s[0] = 1.0
+        with pytest.raises(TypeError):
+            v[0] = 400.0  # type: ignore
 
     @staticmethod
     @given(
@@ -1137,9 +1133,9 @@ class TestVectorUncertainty:
     def test_tolist_edgecase():
         """Contrived test for when tolist is not available."""
         v = VectorUncertainty(np.array([1, 2, 3]), np.array([4, 5, 6]))
-        v._nom = {1, 2, 3, 4}
+        v._nom = {1, 2, 3, 4}  # type: ignore
 
-        with pytest.raises(AttributeError):
+        with pytest.raises(TypeError):
             _ = v.tolist()
 
     @staticmethod
@@ -1164,6 +1160,16 @@ class TestVectorUncertainty:
 
         digest = joblib.hash((v._nom, v._err), hash_name="sha1")
         assert v.__hash__() == int.from_bytes(bytes(digest, encoding="utf-8"), "big")
+
+    def test_unimplemented_methods(self):
+        v = Uncertainty(np.array([1, 2, 3]))
+
+        with pytest.raises(TypeError):
+            _ = float(v)
+        with pytest.raises(TypeError):
+            _ = int(v)
+        with pytest.raises(TypeError):
+            _ = complex(v)
 
 
 class TestScalarUncertainty:
@@ -1289,7 +1295,7 @@ class TestScalarUncertainty:
         result = s1 == "something"
         assert result is False
 
-        s2._nom = "bad value"
+        s2._nom = "bad value"  # type: ignore
         result = s1 == s2
         assert result is False
 
@@ -1297,3 +1303,37 @@ class TestScalarUncertainty:
     def test_hash():
         s = ScalarUncertainty(1, 2)
         assert s.__hash__() == hash((s._nom, s._err))
+
+    def test_unimplemented_methods(self):
+        s = Uncertainty(1, 2)
+
+        with pytest.raises(TypeError):
+            _ = s[0]
+        with pytest.raises(TypeError):
+            s[0] = 1.0  # type: ignore
+        with pytest.raises(TypeError):
+            _ = s.__bytes__()
+        with pytest.raises(TypeError):
+            _ = next(s.__iter__())
+        with pytest.raises(TypeError):
+            _ = s.clip(min=1, max=2)
+        with pytest.raises(TypeError):
+            s.fill(1)
+        with pytest.raises(TypeError):
+            s.put(1, Uncertainty(2, 3))
+        with pytest.raises(TypeError):
+            _ = s.copy()
+        with pytest.raises(TypeError):
+            _ = next(s.flat)
+        with pytest.raises(TypeError):
+            s.shape
+        with pytest.raises(TypeError):
+            s.shape = (2, 3)
+        with pytest.raises(TypeError):
+            s.nbytes
+        with pytest.raises(TypeError):
+            _ = s.searchsorted(1)
+        with pytest.raises(TypeError):
+            _ = len(s)
+        with pytest.raises(TypeError):
+            _ = s.view()

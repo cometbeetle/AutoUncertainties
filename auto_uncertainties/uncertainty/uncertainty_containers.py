@@ -234,7 +234,7 @@ class Uncertainty(Generic[T], UncertaintyDisplay):
                 and not isinstance(error, ScalarT)
             ):
                 msg = f"Error must be a sequence or scalar when value is a sequence (got {type(error)} instead)"
-                raise ValueError(msg)
+                raise TypeError(msg)
             self._init_seq(value, error)
 
         # Case where a vector uncertainty is instantiated.
@@ -245,14 +245,14 @@ class Uncertainty(Generic[T], UncertaintyDisplay):
                 and not isinstance(error, ScalarT)
             ):
                 msg = f"Error must be a NumPy array or scalar when value is a NumPy array (got {type(error)} instead)"
-                raise ValueError(msg)
+                raise TypeError(msg)
             self._init_vec(value, error)
 
         # Scalar case. Maintains NumPy data types if detected. Converts ints to floating point.
         elif isinstance(value, ScalarT):
             if error is not None and not isinstance(error, ScalarT):
                 msg = f"Error must be a scalar when value is a scalar (got {type(error)} instead)"
-                raise ValueError(msg)
+                raise TypeError(msg)
             if error is not None and np.isfinite(error) and error < 0:
                 msg = f"Got negative value ({error}) for the standard deviation"
                 raise NegativeStdDevError(msg)
@@ -311,11 +311,11 @@ class Uncertainty(Generic[T], UncertaintyDisplay):
                     val[i] = v
                     if not isinstance(reshaped_error[i], ScalarT):
                         msg = f"Error sequence must be of scalars (found element of type {type(err[i])} instead)"
-                        raise ValueError(msg)
+                        raise TypeError(msg)
                     err[i] = reshaped_error[i]
                 else:
                     msg = f"Value sequence must be of scalars or Uncertainty objects (found element of type {type(v)} instead)"
-                    raise ValueError(msg)
+                    raise TypeError(msg)
 
         self.__init__(cast(T, val), err, skip=False)
 
@@ -334,7 +334,7 @@ class Uncertainty(Generic[T], UncertaintyDisplay):
 
         elif not isinstance(error, np.ndarray):
             msg = f"Unsupported error type (got type(error)={type(error)})"
-            raise ValueError(msg)
+            raise TypeError(msg)
 
         elif np.ndim(error) != np.ndim(value) or np.shape(error) != np.shape(value):
             msg = f"Error must have the same shape as value (got value.shape={np.shape(value)}, error.shape={np.shape(error)})"
@@ -516,7 +516,9 @@ class Uncertainty(Generic[T], UncertaintyDisplay):
 
     @classmethod
     @deprecated("call Uncertainty() directly instead")
-    def from_list(cls, value: ValT, error: ErrT | None = None) -> Uncertainty:
+    def from_list(
+        cls, value: ValT, error: ErrT | None = None
+    ) -> Uncertainty:  # pragma: no cover
         """
         Alias for `from_sequence`.
 
@@ -829,7 +831,7 @@ class Uncertainty(Generic[T], UncertaintyDisplay):
             )
             return np.asarray(self._nom, dtype=dtype, copy=copy)
 
-    def __getattr__(self, item):
+    def __getattr__(self, item) -> Any:
         if item.startswith("__array_"):
             # Handle array protocol attributes other than `__array__`
             msg = f"Array protocol attribute {item} not available."
@@ -894,7 +896,7 @@ class Uncertainty(Generic[T], UncertaintyDisplay):
         if isinstance(self._nom, np.ndarray):
             return self.__class__(self._nom.clip(*args, **kwargs), self._err)
         else:
-            return NotImplemented
+            raise TypeError(_type_error_msg("Scalar", "clip"))
 
     def fill(self, value) -> None:
         """
@@ -910,7 +912,7 @@ class Uncertainty(Generic[T], UncertaintyDisplay):
         if isinstance(self._nom, np.ndarray):
             return self._nom.fill(value)
         else:
-            raise NotImplementedError
+            raise TypeError(_type_error_msg("Scalar", "fill"))
 
     def put(
         self, indices, values, mode: Literal["raise", "wrap", "clip"] = "raise"
@@ -935,7 +937,7 @@ class Uncertainty(Generic[T], UncertaintyDisplay):
                 msg = "Can only 'put' Uncertainty objects into Uncertainty objects"
                 raise TypeError(msg)
         else:
-            raise NotImplementedError
+            raise TypeError(_type_error_msg("Scalar", "put"))
 
     def copy(self) -> Uncertainty[T]:
         """
@@ -948,7 +950,7 @@ class Uncertainty(Generic[T], UncertaintyDisplay):
         if isinstance(self._nom, np.ndarray) and isinstance(self._err, np.ndarray):
             return self.__class__(self._nom.copy(), self._err.copy())
         else:
-            return NotImplemented
+            raise TypeError(_type_error_msg("Scalar", "Uncertainty.copy()"))
 
     # Special properties.
     @property
@@ -964,7 +966,7 @@ class Uncertainty(Generic[T], UncertaintyDisplay):
             for u, v in zip(self._nom.flat, self._err.flat, strict=False):
                 yield self.__class__(u, v)
         else:
-            return NotImplemented
+            raise TypeError(_type_error_msg("Scalar", "flat"))
 
     @property
     def shape(self):
@@ -979,7 +981,7 @@ class Uncertainty(Generic[T], UncertaintyDisplay):
         if isinstance(self._nom, np.ndarray):
             return self._nom.shape
         else:
-            return NotImplemented
+            raise TypeError(_type_error_msg("Scalar", "shape"))
 
     @shape.setter
     def shape(self, value):
@@ -987,7 +989,7 @@ class Uncertainty(Generic[T], UncertaintyDisplay):
             self._nom.shape = value
             self._err.shape = value
         else:
-            raise NotImplementedError
+            raise TypeError(_type_error_msg("Scalar", "shape"))
 
     @property
     def nbytes(self):
@@ -1001,7 +1003,7 @@ class Uncertainty(Generic[T], UncertaintyDisplay):
         if isinstance(self._nom, np.ndarray) and isinstance(self._err, np.ndarray):
             return self._nom.nbytes + self._err.nbytes
         else:
-            return NotImplemented
+            raise TypeError(_type_error_msg("Scalar", "nbytes"))
 
     def searchsorted(self, v, side: Literal["left", "right"] = "left", sorter=None):
         """
@@ -1014,7 +1016,7 @@ class Uncertainty(Generic[T], UncertaintyDisplay):
         if isinstance(self._nom, np.ndarray):
             return self._nom.searchsorted(v, side)
         else:
-            return NotImplemented
+            raise TypeError(_type_error_msg("Scalar", "searchsorted"))
 
     def tolist(self):
         """
@@ -1043,8 +1045,7 @@ class Uncertainty(Generic[T], UncertaintyDisplay):
                 msg = f"{type(self._nom).__name__}' does not support tolist."
                 raise AttributeError(msg) from None
         else:
-            msg = f"{type(self._nom).__name__}' does not support tolist."
-            raise AttributeError(msg)
+            raise TypeError(_type_error_msg("Scalar", "tolist"))
 
     def view(self):
         """
@@ -1057,28 +1058,28 @@ class Uncertainty(Generic[T], UncertaintyDisplay):
         if isinstance(self._nom, np.ndarray) and isinstance(self._err, np.ndarray):
             return self.__class__(self._nom.view(), self._err.view())
         else:
-            return NotImplemented
+            raise TypeError(_type_error_msg("Scalar", "view"))
 
     def __bytes__(self) -> bytes:
         if self.is_vector:
             return str(self).encode(locale.getpreferredencoding())
         else:
-            return NotImplemented
+            raise TypeError(_type_error_msg("Scalar", "__bytes__"))
 
     def __iter__(self):
         if isinstance(self._nom, np.ndarray) and isinstance(self._err, np.ndarray):
             for v, e in zip(self._nom, self._err, strict=False):
                 yield self.__class__(v, e)
         else:
-            return NotImplemented
+            raise TypeError(_type_error_msg("Scalar", "__iter__"))
 
     def __len__(self) -> int:
         if isinstance(self._nom, np.ndarray):
             return len(self._nom)
         else:
-            return NotImplemented
+            raise TypeError(_type_error_msg("Scalar", "__len__"))
 
-    def __getitem__(self, key):
+    def __getitem__(self, key: int) -> Uncertainty:
         if isinstance(self._nom, np.ndarray) and isinstance(self._err, np.ndarray):
             try:
                 return self.__class__(self._nom[key], self._err[key])
@@ -1086,9 +1087,9 @@ class Uncertainty(Generic[T], UncertaintyDisplay):
                 msg = f"Index '{key}' not supported"
                 raise IndexError(msg) from e
         else:
-            return NotImplemented
+            raise TypeError(_type_error_msg("Scalar", "__getitem__"))
 
-    def __setitem__(self, key, value) -> None:
+    def __setitem__(self, key: int, value: Uncertainty) -> None:
         if isinstance(self._nom, np.ndarray) and isinstance(self._err, np.ndarray):
             # If value is nan, just set the value in those regions to nan and return. This is the only case where a scalar can be passed as an argument!
             if not isinstance(value, Uncertainty):
@@ -1098,7 +1099,7 @@ class Uncertainty(Generic[T], UncertaintyDisplay):
                     return
                 else:
                     msg = f"Can only pass Uncertainty type to __setitem__! Instead passed {type(value)}"
-                    raise ValueError(msg)
+                    raise TypeError(msg)
 
             if np.size(value._nom) == 1 and np.ndim(value._nom) > 0:
                 self._nom[key] = value._nom[0]
@@ -1107,7 +1108,7 @@ class Uncertainty(Generic[T], UncertaintyDisplay):
                 self._nom[key] = value._nom
                 self._err[key] = value._err
         else:
-            raise NotImplementedError
+            raise TypeError(_type_error_msg("Scalar", "__setitem__"))
 
     # ===================================================================
     # ------------------ SCALAR-SPECIFIC FUNCTIONALITY ------------------
@@ -1115,7 +1116,7 @@ class Uncertainty(Generic[T], UncertaintyDisplay):
 
     def __float__(self):
         if self.is_vector:
-            return NotImplemented
+            raise TypeError(_type_error_msg("Vector", "__float__"))
         else:
             msg = "The uncertainty is stripped when downcasting to float."
             if ERROR_ON_DOWNCAST:
@@ -1130,7 +1131,7 @@ class Uncertainty(Generic[T], UncertaintyDisplay):
 
     def __int__(self):
         if self.is_vector:
-            return NotImplemented
+            raise TypeError(_type_error_msg("Vector", "__int__"))
         else:
             msg = "The uncertainty is stripped when downcasting to int."
             if ERROR_ON_DOWNCAST:
@@ -1145,7 +1146,7 @@ class Uncertainty(Generic[T], UncertaintyDisplay):
 
     def __complex__(self):
         if self.is_vector:
-            return NotImplemented
+            raise TypeError(_type_error_msg("Vector", "__complex__"))
         else:
             msg = "The uncertainty is stripped when downcasting to float."
             if ERROR_ON_DOWNCAST:
@@ -1157,8 +1158,6 @@ class Uncertainty(Generic[T], UncertaintyDisplay):
                     stacklevel=2,
                 )
             return complex(self._nom)
-
-    # TODO: Also check __init__.py files to make sure nothing is weird in those.
 
 
 VectorUncertainty = Uncertainty
@@ -1233,3 +1232,7 @@ def _check_units(value, err) -> tuple[Any, Any, Any]:
         ret_err = err
 
     return ret_val, ret_err, ret_units
+
+
+def _type_error_msg(u_type: str, operation: str) -> str:
+    return f"{u_type} Uncertainty objects do not support the '{operation}' operation"
