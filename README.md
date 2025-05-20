@@ -34,7 +34,7 @@ To build the documentation locally, clone the repository, create a virtual Pytho
 (if desired), and run the following commands within the repository directory:
 
 ```bash
-pip install auto-uncertainties[docs]
+pip install -e .[docs]
 sphinx-build docs/source docs/build
 ```
 
@@ -47,7 +47,7 @@ are automatically run using GitHub actions when commits are pushed to the reposi
 manually, first install the package with testing capabilities:
 
 ```bash
-pip install auto-uncertainties[CI]
+pip install -e .[CI]
 coverage run -m pytest --cov --cov-report=term --ignore=tests/pandas
 ```
 

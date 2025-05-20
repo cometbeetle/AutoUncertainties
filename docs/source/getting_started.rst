@@ -21,9 +21,3 @@ Getting Started
 
     pip install auto-uncertainties[pandas]
 
-* The documentation can be built by installing `auto-uncertainties` with the `[docs]` extension:
-
-.. code:: bash
-
-   pip install auto-uncertainties[docs]
-   sphinx-build docs/source docs/build
