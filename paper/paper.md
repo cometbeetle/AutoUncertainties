@@ -120,6 +120,9 @@ whether it represents a vector uncertainty, or a scalar uncertainty. When instan
 sequence or `NumPy` array, vector-based operations are enabled; when instantiated with scalars,
 only scalar operations are permitted. 
 
+`AutoUncertainties` also provides certain exceptions, helper functions, and accessors, whose details
+can be found in the [documentation](https://autouncertainties.readthedocs.io/en/latest/). 
+
 
 ## Support for Pint
 

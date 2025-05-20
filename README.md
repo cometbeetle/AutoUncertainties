@@ -143,17 +143,20 @@ At the moment, it makes sense to disable the Pandas tests until certain features
   0.0
   ```
 
-* Displayed values are automatically rounded according to the Particle Data Group standard. 
-  This can be turned off using `set_display_rounding`:
+* Displayed values are automatically rounded according to the `g` format specifier. To enable
+  rounding consistent with the Particle Data Group (PDG) standard, the `set_display_format` 
+  function can be called as follows::
 
   ```python
-  >>> from auto_uncertainties import set_display_rounding
-  >>> set_display_rounding(False)
-  >>> from auto_uncertainties import Uncertainty
+  >>> from auto_uncertainties import Uncertainty, set_display_rounding
   >>> import numpy as np
   >>> value = np.linspace(start=0, stop=10, num=5)
   >>> error = np.ones_like(value)*0.1
   >>> u = Uncertainty(value, error)
+  >>> set_display_rounding(True)   # enable PDG rules
+  >>> np.sum(u)
+  25.0 +/- 0.22
+  >>> set_display_rounding(False)  # default behavior
   >>> np.sum(u)
   25 +/- 0.223607
   ```
@@ -162,10 +165,9 @@ At the moment, it makes sense to disable the Pandas tests until certain features
   uncertainty information!), and emit a warning. To make this an error, use `set_downcast_error`:
 
   ```python
-  >>> from auto_uncertainties import set_downcast_error
-  >>> set_downcast_error(True)
-  >>> from auto_uncertainties import Uncertainty
+  >>> from auto_uncertainties import Uncertainty, set_downcast_error
   >>> import numpy as np
+  >>> set_downcast_error(True)
   >>> value = np.linspace(start=0, stop=10, num=5)
   >>> error = np.ones_like(value)*0.1
   >>> u = Uncertainty(value, error)
