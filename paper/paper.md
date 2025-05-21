@@ -19,7 +19,7 @@ affiliations:
    index: 1
 
 bibliography: paper.bib
-date: 7 February 2025
+date: 21 May 2025
 ---
 
 # Summary
@@ -34,20 +34,15 @@ The Python package `AutoUncertainties`, described here, provides a solution to t
 
 # Statement of Need
 
-`AutoUncertainties` is a Python package for uncertainty propagation. It provides
-a drop-in mechanism to add uncertainty information to Python scalar and `NumPy`
-[@harris2020array] array variables. It implements manual propagation rules for the Python dunder
-math methods, and uses automatic differentiation via `JAX` [@jax2018github] to propagate uncertainties
-for most `NumPy` methods applied to both scalar and `NumPy` array variables. In doing so,
-it eliminates the need for carrying around additional uncertainty variables or
-for implementing custom propagation rules for any `NumPy` operator with a gradient
-rule implemented by `JAX`. Furthermore, in most cases, it requires minimal modification to existing 
-code—typically only when uncertainties are attached to central values.
-
-
-==============================================
-- TODO: Mention why this is necessary (i.e., a particular use case that inspired the package).
-==============================================
+`AutoUncertainties` is a Python package for uncertainty propagation of independent and identically
+distributed (i.i.d.) variables. It provides a drop-in mechanism to add uncertainty information to Python 
+scalar and `NumPy` [@harris2020array] array variables. It implements manual propagation rules for the 
+Python dunder math methods, and uses automatic differentiation via `JAX` [@jax2018github] to propagate 
+uncertainties for most `NumPy` methods applied to both scalar and `NumPy` array variables. In doing so,
+it eliminates the need for carrying around additional uncertainty variables or for implementing custom
+propagation rules for any `NumPy` operator with a gradient rule implemented by `JAX`. Furthermore, in 
+most cases, it requires minimal modification to existing code—typically only when uncertainties are 
+attached to central values.
 
 
 # Prior Work
@@ -57,7 +52,7 @@ To the author's knowledge, the only existing error propagation library in Python
 package relies on hand-implemented rules and functions for uncertainty propagation of array and scalar data. 
 This is mostly trivial for Python's intrinsic arithmetic and logical operations such as `__add__`, however it becomes 
 problematic for more advanced mathematical operations. For instance, calculating the uncertainty propagation due to 
-the cosine function requires the import of separate math libraries
+the cosine function requires the import of separate math libraries, rather than being able to use `NumPy` directly.
 
 ```python
 # Using uncertainties v3.2.3
@@ -67,8 +62,6 @@ arr = np.array([ufloat(1, 0.1), ufloat(2, 0.002)])
 unumpy.cos(arr)  # calculation succeeds
 ```
 
-rather than being able to use `NumPy` directly.
-
 ```python
 import numpy as np
 from uncertainties import ufloat
@@ -76,10 +69,14 @@ arr = np.array([ufloat(1, 0.1), ufloat(2, 0.002)])
 np.cos(arr)  # raises an exception
 ```
 
+The example above illustrates a primary limitation of the `uncertainties` package: arrays of 
+`ufloat` objects cannot be seamlessly integrated with common `NumPy` functions, and can only
+be operated on by the `unumpy` suite of functions.
+
 
 # Implementation
 
-For a function $f(x) : \mathbb{R}^n \rightarrow \mathbb{R}^m$ of independent and identically distributed (i.i.d.) 
+For a function $f(x) : \mathbb{R}^n \rightarrow \mathbb{R}^m$ of $n$ i.i.d. 
 variables, linear uncertainty propagation can be computed via the simple rule 
 $$ \delta f_j (\mathbf x)^2 = \sum_i^n \left(\dfrac{\partial f_j}{\partial x_i} \delta x_i \right)^2, \quad\quad j \in [1, m].$$
 
@@ -92,7 +89,7 @@ The user API for the `Uncertainty` object exposes a number of properties and met
 important are:
 
 - `value -> float`: The central value of the object.
-- `error -> float`: The error of the object.
+- `error -> float`: The error (standard deviation) of the object.
 - `relative -> float`: The relative error (i.e. error / value) of the object.
 - `plus_minus(self, err: float) -> Uncertainty`: Adds error (in quadrature).
 
@@ -115,13 +112,28 @@ print(seq.value)  # [5.25 1.85]
 print(seq.error)  # [0.75 0.4 ]
 ```
 
+Of course, one of the most important aspects of `AutoUncertainties` is its seamless support for `NumPy`:
+
+```python
+import numpy as np
+from auto_uncertainties import Uncertainty
+vals = np.array([0.5, 0.75])
+errs = np.array([0.05, 0.3])
+u = Uncertainty(vals, errs)
+
+print(np.cos(u))  # [0.877583 +/- 0.0239713, 0.731689 +/- 0.204492]
+```
+
+This is in contrast to the `uncertainties` package, which would have necessitated using the 
+`unumpy` module of hand-implemented `NumPy` function analogs.
+
 The `Uncertainty` class automatically determines which methods should be implemented based on 
 whether it represents a vector uncertainty, or a scalar uncertainty. When instantiated with a
 sequence or `NumPy` array, vector-based operations are enabled; when instantiated with scalars,
 only scalar operations are permitted. 
 
-`AutoUncertainties` also provides certain exceptions, helper functions, and accessors, whose details
-can be found in the [documentation](https://autouncertainties.readthedocs.io/en/latest/). 
+`AutoUncertainties` also provides certain exceptions, helper functions, accessors, and display 
+rounding adjustors, whose details can be found in the [documentation](https://autouncertainties.readthedocs.io/en/latest/). 
 
 
 ## Support for Pint

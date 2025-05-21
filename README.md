@@ -6,11 +6,40 @@ straightforward and automatic using auto-differentiation.
 
 * View the [full documentation here](https://autouncertainties.readthedocs.io/en/latest/). 
 
+  
+## Statement of Need
+
+AutoUncertainties is a Python package for uncertainty propagation of independent and identically
+distributed (i.i.d.) variables. It provides a drop-in mechanism to add uncertainty information to Python 
+scalar and NumPy array variables. It implements manual propagation rules for the 
+Python dunder math methods, and uses automatic differentiation via JAX to propagate 
+uncertainties for most NumPy methods applied to both scalar and NumPy array variables. In doing so,
+it eliminates the need for carrying around additional uncertainty variables or for implementing custom
+propagation rules for any NumPy operator with a gradient rule implemented by JAX. In 
+most cases, it requires minimal modification to existing code—typically only when uncertainties are 
+attached to central values.
+
+One of the most important aspects of AutoUncertainties is its seamless support for NumPy:
+
+```python
+import numpy as np
+from auto_uncertainties import Uncertainty
+vals = np.array([0.5, 0.75])
+errs = np.array([0.05, 0.3])
+u = Uncertainty(vals, errs)
+print(np.cos(u))  # [0.877583 +/- 0.0239713, 0.731689 +/- 0.204492]
+```
+
+This is in contrast to the `uncertainties` package, which would have required the use of `unumpy`,
+a module containing several hand-implemented analogs of the true NumPy functions. 
+
+
 ## Supported Features
 
 - [x] Scalars
 - [x] Arrays, with support for most NumPy ufuncs and functions
 - [ ] Pandas Extension Type (see [here](https://pandas.pydata.org/docs/reference/api/pandas.api.extensions.ExtensionDtype.html))
+
 
 ## Prerequisites
 
@@ -20,6 +49,7 @@ For array support:
 * `jaxlib`
 * `numpy`
 
+
 ## Installation
 
 To install, simply run:
@@ -27,6 +57,7 @@ To install, simply run:
 ```
 pip install auto-uncertainties
 ```
+
 
 ## Build Documentation
 
@@ -39,6 +70,7 @@ sphinx-build docs/source docs/build
 ```
 
 Once built, the docs can be found under the `docs/build` subdirectory.
+
 
 ## CI and Unit Testing
 
@@ -59,22 +91,22 @@ At the moment, it makes sense to disable the Pandas tests until certain features
 * Creating a scalar `Uncertainty` variable is relatively simple:
 
   ```python
-  >>> from auto_uncertainties import Uncertainty
-  >>> value = 1.0
-  >>> error = 0.1
-  >>> u = Uncertainty(value, error)
-  >>> u
-  1 +/- 0.1
+  from auto_uncertainties import Uncertainty
+  value = 1.0
+  error = 0.1
+  u = Uncertainty(value, error)
+  print(u)  # 1 +/- 0.1
   ```
   
   As is creating a NumPy array of Uncertainties:
 
   ```python
-  >>> from auto_uncertainties import Uncertainty
-  >>> import numpy as np
-  >>> value = np.linspace(start=0, stop=10, num=5)
-  >>> error = np.ones_like(value)*0.1
-  >>> u = Uncertainty(value, error)
+  from auto_uncertainties import Uncertainty
+  import numpy as np
+  value = np.linspace(start=0, stop=10, num=5)
+  error = np.ones_like(value)*0.1
+  u = Uncertainty(value, error)
+  print(u)  # [0 +/- 0.1, 2.5 +/- 0.1, 5 +/- 0.1, 7.5 +/- 0.1, 10 +/- 0.1]
   ```
 
   The `Uncertainty` class automatically determines which methods should be implemented based on 
@@ -87,60 +119,51 @@ At the moment, it makes sense to disable the Pandas tests until certain features
   uncertainty propagation.
 
   ```python
-  >>> from auto_uncertainties import Uncertainty
-  >>> u = Uncertainty(10.0, 3.0)
-  >>> v = Uncertainty(20.0, 4.0)
-  >>> u + v
-  30 +/- 5
+  from auto_uncertainties import Uncertainty
+  u = Uncertainty(10.0, 3.0)
+  v = Uncertainty(20.0, 4.0)
+  print(u + v)  # 30 +/- 5
   ```
 
 * Array uncertainties implement a large subset of the NumPy ufuncs and methods using `jax.grad` or 
   `jax.jacfwd`, depending on the output shape.
 
   ```python
-  >>> from auto_uncertainties import Uncertainty
-  >>> import numpy as np
-  >>> value = np.linspace(start=0, stop=10, num=5)
-  >>> error = np.ones_like(value)*0.1
-  >>> u = Uncertainty(value, error)
-  >>> np.exp(u)
-  [1 +/- 0.1, 12.1825 +/- 1.21825, 148.413 +/- 14.8413, 1808.04 +/- 180.804, 22026.5 +/- 2202.65]
-  >>> np.sum(u)
-  25 +/- 0.223607
-  >>> u.sum()
-  25 +/- 0.223607
-  >>> np.sqrt(np.sum(error**2))
-  0.223606797749979
+  from auto_uncertainties import Uncertainty
+  import numpy as np
+  value = np.linspace(start=0, stop=10, num=5)
+  error = np.ones_like(value)*0.1
+  u = Uncertainty(value, error)
+  print(np.exp(u))
+  # [1 +/- 0.1, 12.1825 +/- 1.21825, 148.413 +/- 14.8413, 1808.04 +/- 180.804, 22026.5 +/- 2202.65]
+  
+  print(np.sum(u))  # 25 +/- 0.223607
+  print(u.sum())    # 25 +/- 0.223607
+  print(np.sqrt(np.sum(error**2)))  # 0.223606797749979
   ```
 
 * The central value, uncertainty, and relative error are available as attributes:
 
   ```python
-  >>> from auto_uncertainties import Uncertainty
-  >>> u = Uncertainty(10.0, 3.0)
-  >>> u.value
-  10.0
-  >>> u.error
-  3.0
-  >>> u.rel
-  0.3
+  from auto_uncertainties import Uncertainty
+  u = Uncertainty(10.0, 3.0)
+  print(u.value)     # 10.0
+  print(u.error)     # 3.0
+  print(u.relative)  # 0.3
   ```
 
 * To strip central values and uncertainty from arbitrary variables, accessor functions `nominal_values`
   and `std_devs` are provided:
 
   ```python
-  >>> from auto_uncertainties import nominal_values, std_devs
-  >>> u = Uncertainty(10.0, 3.0)
-  >>> v = 5.0
-  >>> nominal_values(u)
-  10.0
-  >>> std_devs(u)
-  3.0
-  >>> nominal_values(v)
-  5.0
-  >>> std_devs(v)
-  0.0
+  from auto_uncertainties import nominal_values, std_devs
+  u = Uncertainty(10.0, 3.0)
+  v = 5.0
+  print(nominal_values(u))  # 10.0
+  print(std_devs(u))        # 3.0
+  
+  print(nominal_values(v))  # 5.0
+  print(std_devs(v))        # 0.0
   ```
 
 * Displayed values are automatically rounded according to the `g` format specifier. To enable
@@ -148,17 +171,15 @@ At the moment, it makes sense to disable the Pandas tests until certain features
   function can be called as follows:
 
   ```python
-  >>> from auto_uncertainties import Uncertainty, set_display_rounding
-  >>> import numpy as np
-  >>> value = np.linspace(start=0, stop=10, num=5)
-  >>> error = np.ones_like(value)*0.1
-  >>> u = Uncertainty(value, error)
-  >>> set_display_rounding(True)   # enable PDG rules
-  >>> np.sum(u)
-  25.0 +/- 0.22
-  >>> set_display_rounding(False)  # default behavior
-  >>> np.sum(u)
-  25 +/- 0.223607
+  from auto_uncertainties import Uncertainty, set_display_rounding
+  import numpy as np
+  value = np.linspace(start=0, stop=10, num=5)
+  error = np.ones_like(value)*0.1
+  u = Uncertainty(value, error)
+  set_display_rounding(True)   # enable PDG rules
+  print(np.sum(u))  # 25.0 +/- 0.22
+  set_display_rounding(False)  # default behavior
+  print(np.sum(u))  # 25 +/- 0.223607
   ```
 
   If enabled, the PDG rounding rules will, in general, cause `Uncertainty` objects to be displayed with:
@@ -171,18 +192,19 @@ At the moment, it makes sense to disable the Pandas tests until certain features
   instead, use `set_downcast_error`:
 
   ```python
-  >>> from auto_uncertainties import Uncertainty, set_downcast_error
-  >>> import numpy as np
-  >>> set_downcast_error(True)
-  >>> value = np.linspace(start=0, stop=10, num=5)
-  >>> error = np.ones_like(value)*0.1
-  >>> u = Uncertainty(value, error)
-  >>> np.array(u)
-  Traceback (most recent call last):
-      ...
-  auto_uncertainties.exceptions.DowncastError: The uncertainty is stripped when downcasting to ndarray.
+  from auto_uncertainties import Uncertainty, set_downcast_error
+  import numpy as np
+  set_downcast_error(True)
+  value = np.linspace(start=0, stop=10, num=5)
+  error = np.ones_like(value)*0.1
+  u = Uncertainty(value, error)
+  print(np.array(u))
+  # Traceback (most recent call last):
+  #     ...
+  # auto_uncertainties.exceptions.DowncastError: The uncertainty is stripped when downcasting to ndarray.
   ```
   
+
 ## Current Limitations and Future Work
 
 ### Dependent Random Variables
@@ -242,6 +264,11 @@ These workarounds are nevertheless cumbersome, and cause `AutoUncertainties` to 
 goals of automated error propagation. In principle, this could be addressed by storing a full computational
 graph of the result of chained operations, similar to what is done in `uncertainties`. However, the complexity
 of such a system places it out of scope for `AutoUncertainties` at this time.
+
+It should be noted that, in cases where random variables have covariance that lies somewhere between 
+fully correlated and fully independent, calculations like those described above would be more complex.
+To accurately propagate uncertainty, one would need to specify individual correlations between each 
+variable, and adjust the computation as necessary. This is also currently out of scope for `AutoUncertainties`.
 
 
 ## Inspirations

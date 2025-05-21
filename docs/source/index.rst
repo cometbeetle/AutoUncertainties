@@ -53,6 +53,35 @@ Quick Reference
 * :doc:`Contribution Information <contribution>`
 
 
+Statement of Need
+-----------------
+
+AutoUncertainties is a Python package for uncertainty propagation of independent and identically
+distributed (i.i.d.) variables. It provides a drop-in mechanism to add uncertainty information to Python 
+scalar and NumPy array variables. It implements manual propagation rules for the 
+Python dunder math methods, and uses automatic differentiation via JAX to propagate 
+uncertainties for most NumPy methods applied to both scalar and NumPy array variables. In doing so,
+it eliminates the need for carrying around additional uncertainty variables or for implementing custom
+propagation rules for any NumPy operator with a gradient rule implemented by JAX. In  most cases, 
+it requires minimal modification to existing code—typically only when uncertainties are  attached to central values.
+
+One of the most important aspects of AutoUncertainties is its seamless support for NumPy:
+
+.. code-block:: python
+   :caption: Example
+
+   >>> import numpy as np
+   >>> from auto_uncertainties import Uncertainty
+   >>> vals = np.array([0.5, 0.75])
+   >>> errs = np.array([0.05, 0.3])
+   >>> u = Uncertainty(vals, errs)
+   >>> print(np.cos(u))
+   [0.877583 +/- 0.0239713, 0.731689 +/- 0.204492]
+
+This is in contrast to the `uncertainties` package, which would have required the use of `unumpy`,
+a module containing several hand-implemented analogs of the true NumPy functions. 
+
+
 Current Limitations and Future Work
 -----------------------------------
 
@@ -68,7 +97,7 @@ in a manner that implies dependence.
 
 - **Subtracting Equivalent Uncertainties**
 
-  Subtracting an `Uncertainty` from itself will not result in a standard deviation of zero:
+  Subtracting an `Uncertainty` from itself will not result in a standard deviation of zero.
 
   .. code-block:: python
 
@@ -115,6 +144,11 @@ These workarounds are nevertheless cumbersome, and cause `AutoUncertainties` to 
 goals of automated error propagation. In principle, this could be addressed by storing a full computational
 graph of the result of chained operations, similar to what is done in `uncertainties`. However, the complexity
 of such a system places it out of scope for `AutoUncertainties` at this time.
+
+It should be noted that, in cases where random variables have covariance that lies somewhere between 
+fully correlated and fully independent, calculations like those described above would be more complex.
+To accurately propagate uncertainty, one would need to specify individual correlations between each 
+variable, and adjust the computation as necessary. This is also currently out of scope for `AutoUncertainties`. 
 
 
 Inspirations
