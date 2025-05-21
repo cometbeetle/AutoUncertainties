@@ -23,7 +23,8 @@ The goal is to have minimal changes to your code in order to enable uncertainty 
      >>> value = np.linspace(start=0, stop=10, num=5)
      >>> error = np.ones_like(value)*0.1
      >>> u = Uncertainty(value, error)
-     >>> u  # [0 +/- 0.1, 2.5 +/- 0.1, 5 +/- 0.1, 7.5 +/- 0.1, 10 +/- 0.1]
+     >>> u
+     [0 +/- 0.1, 2.5 +/- 0.1, 5 +/- 0.1, 7.5 +/- 0.1, 10 +/- 0.1]
 
 
   The `~auto_uncertainties.uncertainty.uncertainty_containers.Uncertainty` class automatically determines

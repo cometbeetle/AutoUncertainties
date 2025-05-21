@@ -1,6 +1,13 @@
 Contribution
 ============
 
+.. image:: https://img.shields.io/badge/GitHub-AutoUncertainties-blue?logo=github&labelColor=black
+   :target: https://github.com/varchasgopalaswamy/AutoUncertainties
+   :alt: Static Badge
+
+AutoUncertainties is maintained and developed on the AutoUncertinties `GitHub repository <https://github.com/varchasgopalaswamy/AutoUncertainties>`_.
+Please feel free to submit any bug reports or pull requests that might add or fix certain features. 
+
 
 CI and Unit Testing
 -------------------

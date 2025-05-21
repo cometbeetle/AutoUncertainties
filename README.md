@@ -1,6 +1,11 @@
 
 # AutoUncertainties
 
+[![Static Badge](https://img.shields.io/badge/GitHub-AutoUncertainties-blue?logo=github&labelColor=black)](https://github.com/varchasgopalaswamy/AutoUncertainties)
+[![GitHub Release](https://img.shields.io/github/v/release/varchasgopalaswamy/AutoUncertainties?label=Current%20Release&color)](https://github.com/varchasgopalaswamy/AutoUncertainties/releases)
+[![python](https://img.shields.io/badge/Python-3.11%20%7C%203.12-ffed57?logo=python&logoColor=white)](https://www.python.org/downloads/)
+[![JOSS Paper](https://joss.theoj.org/papers/d357e888e33e56df674e15c82b82dcac/status.svg)](https://joss.theoj.org/papers/d357e888e33e56df674e15c82b82dcac)
+
 AutoUncertainties is a package that makes handling linear uncertainty propagation for scientific applications 
 straightforward and automatic using auto-differentiation.
 
@@ -10,8 +15,8 @@ straightforward and automatic using auto-differentiation.
 ## Statement of Need
 
 AutoUncertainties is a Python package for uncertainty propagation of independent and identically
-distributed (i.i.d.) variables. It provides a drop-in mechanism to add uncertainty information to Python 
-scalar and NumPy array variables. It implements manual propagation rules for the 
+distributed (i.i.d.) random variables. It provides a drop-in mechanism to add uncertainty information 
+to Python scalar and NumPy array objects. It implements manual propagation rules for the 
 Python dunder math methods, and uses automatic differentiation via JAX to propagate 
 uncertainties for most NumPy methods applied to both scalar and NumPy array variables. In doing so,
 it eliminates the need for carrying around additional uncertainty variables or for implementing custom
@@ -234,7 +239,7 @@ manipulating variables in a manner that implies dependence.
   ```python
   u = Uncertainty(5.0, 0.5)
   arr = np.ones(10) * 10
-  result = np.mean(u * arr)  # 50 +/- 1.58114, rather than 50 +/- 5 as expected
+  print(np.mean(u * arr))  # 50 +/- 1.58114, rather than 50 +/- 5 as expected
   ```
   
   To obtain the uncertainty corresponding to the case where each element of the array is fully correlated,
@@ -249,7 +254,7 @@ manipulating variables in a manner that implies dependence.
      scale_value = u.value                     # collect central value
 
      arr = np.ones(10) * 10
-     result = np.mean(scale_value * arr) * scale_error  # 50 +/- 5
+     print(np.mean(scale_value * arr) * scale_error)  # 50 +/- 5
      ```
 
   2. Take the mean of the vector, and then multiply by the `Uncertainty`:
@@ -257,7 +262,7 @@ manipulating variables in a manner that implies dependence.
      ```python
      u = Uncertainty(5.0, 0.5)
      arr = np.ones(10) * 10
-     result = u * np.mean(arr)  # 50 +/- 5
+     print(u * np.mean(arr))  # 50 +/- 5
      ```
 
 These workarounds are nevertheless cumbersome, and cause `AutoUncertainties` to fall somewhat short of the original

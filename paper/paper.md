@@ -35,9 +35,9 @@ The Python package `AutoUncertainties`, described here, provides a solution to t
 # Statement of Need
 
 `AutoUncertainties` is a Python package for uncertainty propagation of independent and identically
-distributed (i.i.d.) variables. It provides a drop-in mechanism to add uncertainty information to Python 
-scalar and `NumPy` [@harris2020array] array variables. It implements manual propagation rules for the 
-Python dunder math methods, and uses automatic differentiation via `JAX` [@jax2018github] to propagate 
+distributed (i.i.d.) random variables. It provides a drop-in mechanism to add uncertainty information 
+to Python scalar and `NumPy` [@harris2020array] array objects. It implements manual propagation rules 
+for the Python dunder math methods, and uses automatic differentiation via `JAX` [@jax2018github] to propagate 
 uncertainties for most `NumPy` methods applied to both scalar and `NumPy` array variables. In doing so,
 it eliminates the need for carrying around additional uncertainty variables or for implementing custom
 propagation rules for any `NumPy` operator with a gradient rule implemented by `JAX`. Furthermore, in 
@@ -60,13 +60,7 @@ import numpy as np
 from uncertainties import unumpy, ufloat
 arr = np.array([ufloat(1, 0.1), ufloat(2, 0.002)])
 unumpy.cos(arr)  # calculation succeeds
-```
-
-```python
-import numpy as np
-from uncertainties import ufloat
-arr = np.array([ufloat(1, 0.1), ufloat(2, 0.002)])
-np.cos(arr)  # raises an exception
+np.cos(arr)      # raises an exception
 ```
 
 The example above illustrates a primary limitation of the `uncertainties` package: arrays of 
@@ -76,7 +70,7 @@ be operated on by the `unumpy` suite of functions.
 
 # Implementation
 
-For a function $f(x) : \mathbb{R}^n \rightarrow \mathbb{R}^m$ of $n$ i.i.d. 
+For a function $f : \mathbb{R}^n \rightarrow \mathbb{R}^m$ of $n$ i.i.d. 
 variables, linear uncertainty propagation can be computed via the simple rule 
 $$ \delta f_j (\mathbf x)^2 = \sum_i^n \left(\dfrac{\partial f_j}{\partial x_i} \delta x_i \right)^2, \quad\quad j \in [1, m].$$
 
@@ -175,10 +169,10 @@ uncertainty propagation. This is a common pitfall when working with `Uncertainty
 the package will not prevent users from manipulating variables in a manner that implies dependence. Examples 
 of this behavior, along with certain potential workarounds, can be found [here](https://autouncertainties.readthedocs.io/en/latest/index.html#current-limitations-and-future-work) 
 in the documentation. In general, most binary operations involving the same variable twice will 
-produce undesired results (for instance, performing `X - X`, where X is an `Uncertainty` object, will
+produce undesired results (for instance, performing `X - X`, where `X` is an `Uncertainty` object, will
 *not* result in a standard deviation of zero).
 
-These workarounds are nevertheless cumbersome, and cause `AutoUncertainties` to fall somewhat short of the original
+The workarounds are nevertheless cumbersome, and cause `AutoUncertainties` to fall somewhat short of the original
 goals of automated error propagation. In principle, this could be addressed by storing a full computational
 graph of the result of chained operations, similar to what is done in `uncertainties`. However, the complexity
 of such a system places it out of scope for `AutoUncertainties` at this time.
