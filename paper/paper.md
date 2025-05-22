@@ -100,7 +100,7 @@ print(u1.error)            # 0.75
 print(u1.relative)         # 0.142857
 print(u1.plus_minus(0.5))  # 5.25 +/- 0.901388
 
-# Construct a vector `Uncertainty` from a sequence.
+# Construct a vector Uncertainty from a sequence.
 seq = Uncertainty([u1, u2]) 
 print(seq.value)  # [5.25 1.85]
 print(seq.error)  # [0.75 0.4 ]
@@ -122,8 +122,8 @@ This is in contrast to the `uncertainties` package, which would have necessitate
 `unumpy` module of hand-implemented `NumPy` function analogs.
 
 The `Uncertainty` class automatically determines which methods should be implemented based on 
-whether it represents a vector uncertainty, or a scalar uncertainty. When instantiated with a
-sequence or `NumPy` array, vector-based operations are enabled; when instantiated with scalars,
+whether it represents a vector uncertainty, or a scalar uncertainty. When instantiated with
+sequences or `NumPy` arrays, vector-based operations are enabled; when instantiated with scalars,
 only scalar operations are permitted. 
 
 `AutoUncertainties` also provides certain exceptions, helper functions, accessors, and display 

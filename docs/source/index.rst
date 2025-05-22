@@ -165,7 +165,7 @@ variable, and adjust the computation as necessary. This is also currently out of
 Inspirations
 ------------
 
-The class structure of `~auto_uncertainties.uncertainty.uncertainty_containers.Uncertainty`, and the `numpy`
+The class structure of `~auto_uncertainties.uncertainty.uncertainty_containers.Uncertainty`, and the NumPy
 ufunc implementation is heavily inspired by the excellent package `Pint <https://github.com/hgrecco/pint>`_.
 
 

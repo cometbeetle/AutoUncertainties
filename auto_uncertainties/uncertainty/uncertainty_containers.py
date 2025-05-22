@@ -79,8 +79,8 @@ class Uncertainty(Generic[T], UncertaintyDisplay):
     other `Uncertainty` objects, or lists / tuples of `Uncertainty` objects.
 
     The `Uncertainty` class automatically determines which methods should be implemented based on
-    whether it represents a vector uncertainty, or a scalar uncertainty. When instantiated with a
-    sequence or `numpy` array, vector-based operations are enabled; when instantiated with scalars,
+    whether it represents a vector uncertainty, or a scalar uncertainty. When instantiated with
+    sequences or `numpy` arrays, vector-based operations are enabled; when instantiated with scalars,
     only scalar operations are permitted.
 
     `Uncertainty` objects only support float-based data types. If integers or

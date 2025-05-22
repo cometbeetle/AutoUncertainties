@@ -115,8 +115,8 @@ At the moment, it makes sense to disable the Pandas tests until certain features
   ```
 
   The `Uncertainty` class automatically determines which methods should be implemented based on 
-  whether it represents a vector uncertainty, or a scalar uncertainty. When instantiated with a
-  sequence or `NumPy` array, vector-based operations are enabled; when instantiated with scalars,
+  whether it represents a vector uncertainty, or a scalar uncertainty. When instantiated with
+  sequences or NumPy arrays, vector-based operations are enabled; when instantiated with scalars,
   only scalar operations are permitted. 
 
 * Scalar uncertainties implement all mathematical and logical 
@@ -278,5 +278,5 @@ variable, and adjust the computation as necessary. This is also currently out of
 
 ## Inspirations
 
-The class structure of `Uncertainty` and the `NumPy` ufunc implementation is heavily inspired by the 
+The class structure of `Uncertainty` and the NumPy ufunc implementation is heavily inspired by the 
 excellent package [Pint](https://github.com/hgrecco/pint).
