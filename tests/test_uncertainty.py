@@ -1326,11 +1326,11 @@ class TestScalarUncertainty:
         with pytest.raises(TypeError):
             _ = next(s.flat)
         with pytest.raises(TypeError):
-            s.shape
+            _ = s.shape
         with pytest.raises(TypeError):
-            s.shape = (2, 3)
+            _ = s.shape = (2, 3)
         with pytest.raises(TypeError):
-            s.nbytes
+            _ = s.nbytes
         with pytest.raises(TypeError):
             _ = s.searchsorted(1)
         with pytest.raises(TypeError):

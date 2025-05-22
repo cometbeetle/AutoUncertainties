@@ -118,8 +118,20 @@ class Uncertainty(Generic[T], UncertaintyDisplay):
     _nom: T
     _err: T
 
-    # Intercepts non-finite values, Pint Quantity inputs, and sequences of Quantity objects.
-    def __new__(cls, value, error=None) -> Uncertainty[T]:
+    # __new__ intercepts non-finite values, Pint Quantity inputs, and sequences of Quantity objects.
+    @overload
+    def __new__(
+        cls,
+        value: PlainQuantity | Sequence[PlainQuantity],
+        error: PlainQuantity | Sequence[PlainQuantity] | ErrT | None = ...,
+    ) -> PlainQuantity: ...
+    @overload
+    def __new__(
+        cls, value: ValT, error: PlainQuantity | Sequence[PlainQuantity]
+    ) -> PlainQuantity: ...
+    @overload
+    def __new__(cls, value, error=...) -> Uncertainty: ...
+    def __new__(cls, value, error=None):
         # Return NaN if value is NaN.
         if isinstance(value, ScalarT) and not np.isfinite(value):
             return np.nan  # type: ignore
@@ -165,16 +177,16 @@ class Uncertainty(Generic[T], UncertaintyDisplay):
 
     # List of __init__ overloads for static type checking.
     @overload
-    def __init__(self: Uncertainty[float], value: int, error: ErrT | None = None): ...
+    def __init__(self: Uncertainty[float], value: int, error: ErrT | None = ...): ...
     @overload
     def __init__(
-        self: Uncertainty[np.float64], value: np.integer, error: ErrT | None = None
+        self: Uncertainty[np.float64], value: np.integer, error: ErrT | None = ...
     ): ...
     @overload
     def __init__(
         self: Uncertainty[npt.NDArray[np.floating]],
         value: npt.NDArray[np.integer] | SupportedSequence,
-        error: ErrT | None = None,
+        error: ErrT | None = ...,
     ): ...
     @overload
     def __init__(self: Uncertainty[float], value: Uncertainty[float]): ...
@@ -186,22 +198,9 @@ class Uncertainty(Generic[T], UncertaintyDisplay):
         value: Uncertainty[npt.NDArray[np.floating]],
     ): ...
     @overload
-    def __init__(
-        self,
-        value: PlainQuantity | Sequence[PlainQuantity],
-        error: PlainQuantity | Sequence[PlainQuantity] | ErrT | None = None,
-    ): ...
+    def __init__(self: Self, value: T, error: ErrT | None = ...): ...
     @overload
-    def __init__(
-        self,
-        value: ValT,
-        error: PlainQuantity | Sequence[PlainQuantity],
-    ): ...
-    @overload
-    def __init__(self: Self, value: T, error: ErrT | None = None): ...
-    @overload
-    def __init__(self, value: ValT, error: ErrT | None = None, skip: bool = True): ...
-
+    def __init__(self, value: ValT, error: ErrT | None = ..., skip: bool = ...): ...
     def __init__(self, value, error=None, skip=True) -> None:
         if skip:
             return
@@ -275,8 +274,6 @@ class Uncertainty(Generic[T], UncertaintyDisplay):
                     if (error is not None and np.isfinite(error))
                     else caster(0.0),
                 )
-
-        # TODO: Deal with edge cases where dunder methods convert float to int (or other things)...
 
         else:
             msg = f"Unsupported argument types (got type(value)={type(value)}, type(error)={type(error)})"
@@ -442,19 +439,17 @@ class Uncertainty(Generic[T], UncertaintyDisplay):
 
     @classmethod
     @overload
-    def from_quantities(cls, value: ValT, error: ErrT | None = None) -> Uncertainty: ...
+    def from_quantities(cls, value: ValT, error: ErrT | None = ...) -> Uncertainty: ...
 
     @classmethod
     @overload
     def from_quantities(
-        cls, value: PlainQuantity, error: PlainQuantity | ErrT | None = None
+        cls, value: PlainQuantity, error: PlainQuantity | ErrT | None = ...
     ) -> PlainQuantity: ...
 
     @classmethod
     @overload
-    def from_quantities(
-        cls, value: PlainQuantity | ValT, error: ErrT | None = None
-    ) -> PlainQuantity: ...
+    def from_quantities(cls, value: ValT, error: PlainQuantity) -> PlainQuantity: ...
 
     @classmethod
     def from_quantities(cls, value, error=None) -> PlainQuantity | Uncertainty:
