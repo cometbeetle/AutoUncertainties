@@ -253,7 +253,7 @@ class Uncertainty(Generic[T], UncertaintyDisplay):
                 raise NegativeStdDevError(msg)
 
             caster = np.float64 if isinstance(value, np.number) else float
-            if isinstance(value, (int, np.integer)):
+            if isinstance(value, int | np.integer):
                 self._nom = cast(T, caster(value))
                 self._err = cast(
                     T,
@@ -659,10 +659,7 @@ class Uncertainty(Generic[T], UncertaintyDisplay):
     def __rmod__(self, other):
         if isinstance(other, self._HANDLED_TYPES):
             new_mag = other % self._nom
-            if np.ndim(new_mag) == 0:
-                new_err = 0.0
-            else:
-                new_err = np.zeros_like(new_mag)
+            new_err = 0.0 if np.ndim(new_mag) == 0 else np.zeros_like(new_mag)
             return self.__class__(new_mag, new_err)
         else:
             return NotImplemented
@@ -773,7 +770,7 @@ class Uncertainty(Generic[T], UncertaintyDisplay):
                     return self._nom == other
 
     def __round__(self, ndigits):
-        if isinstance(self._nom, np.ndarray) or isinstance(self._nom, np.number):
+        if isinstance(self._nom, np.ndarray | np.number):
             return self.__class__(np.round(self._nom, decimals=ndigits), self._err)
         else:
             return self.__class__(float(round(self._nom, ndigits=ndigits)), self._err)
