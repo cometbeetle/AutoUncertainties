@@ -63,13 +63,13 @@ def check_units_and_mag(unc, units, mag, err):
         assert unc.error.to(units).m == err
 
 
-general_float_strategy = dict(
-    allow_nan=False,
-    allow_infinity=False,
-    allow_subnormal=False,
-    min_value=-1e3,
-    max_value=1e3,
-)
+general_float_strategy = {
+    "allow_nan": False,
+    "allow_infinity": False,
+    "allow_subnormal": False,
+    "min_value": -1e3,
+    "max_value": 1e3,
+}
 
 
 @pytest.mark.filterwarnings("ignore::RuntimeWarning")
@@ -1159,7 +1159,9 @@ class TestVectorUncertainty:
         v = VectorUncertainty(np.array([1.0, 2.0, 3.0]), np.array([4.0, 5.0, 6.0]))
 
         digest = joblib.hash((v._nom, v._err), hash_name="sha1")
-        assert v.__hash__() == int.from_bytes(bytes(digest, encoding="utf-8"), "big")
+        assert v.__hash__() == int.from_bytes(
+            bytes(digest if digest else "", encoding="utf-8"), "big"
+        )
 
     def test_unimplemented_methods(self):
         v = Uncertainty(np.array([1, 2, 3]))
