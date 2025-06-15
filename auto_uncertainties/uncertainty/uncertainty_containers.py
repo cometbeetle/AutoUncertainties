@@ -97,6 +97,25 @@ class Uncertainty(Generic[T], UncertaintyDisplay):
 
     :return: An initialized `Uncertainty` object
 
+    .. code-block:: python
+       :caption: Example
+
+       >>> u1 = Uncertainty(1.25, 0.25)
+       >>> u2 = Uncertainty([1.4, 2.8, 0.09], [0.1, 0.14, 0.12])
+       >>> u3 = Uncertainty([1.4, 2.8, 0.09], 0.1)
+       >>> u4 = Uncertainty(u1)
+       # TODO: ADD BETTER USAGE EXAMPLES
+
+    .. code-block:: python
+       :caption: Pint Quantity Example
+
+       >>> from pint import Quantity
+       >>> val = Quantity(2.24, 'kg')
+       >>> err = Quantity(0.208, 'kg')
+       >>> new_quantity = Uncertainty(val, err)
+       >>> new_quantity
+       <Quantity(2.24 +/- 0.208, 'kilogram')>
+
     .. note::
 
        * If sequences (not NumPy arrays) are supplied for ``value`` and ``error``,
@@ -140,40 +159,13 @@ class Uncertainty(Generic[T], UncertaintyDisplay):
         if _check_units(value, error)[2] is not None:
             return cls.from_quantities(value, error)
 
-        mag_units = err_units = None
-        if (
-            isinstance(value, Sequence)
-            and len(value) > 0
-            and hasattr(value[0], "units")
-        ):
-            # Converts all values to the same unit.
-            mag_units = value[0].units
-            value = [
-                (item.to(mag_units).m if hasattr(item, "units") else item)
-                for item in value
-            ]
-        if (
-            isinstance(error, Sequence)
-            and len(error) > 0
-            and hasattr(error[0], "units")
-        ):
-            # Convert all error units to value units, if possible. Otherwise, make sure all errors use same units.
-            err_units = error[0].units
-            if mag_units is not None:
-                error = [
-                    (item.to(mag_units).m if hasattr(item, "units") else item)
-                    for item in error
-                ]
-            else:
-                error = [
-                    (item.to(err_units).m if hasattr(item, "units") else item)
-                    for item in error
-                ]
+        # Use from_sequence if a sequence is supplied.
+        if isinstance(value, Sequence):
+            return cls.from_sequence(value, error)
 
         instance = super().__new__(cls)
         instance.__init__(value, error, skip=False)
-        units = mag_units if mag_units is not None else err_units
-        return (instance * units) if units is not None else instance
+        return instance
 
     # List of __init__ overloads for static type checking.
     @overload
@@ -310,7 +302,7 @@ class Uncertainty(Generic[T], UncertaintyDisplay):
                     msg = f"Value sequence must be of scalars or Uncertainty objects (found element of type {type(v)} instead)"
                     raise TypeError(msg)
 
-        self.__init__(cast(T, val), err, skip=False)
+        self.__init__(val, err, skip=False)
 
     def _init_vec(
         self,
@@ -324,10 +316,6 @@ class Uncertainty(Generic[T], UncertaintyDisplay):
         # Constant error.
         elif isinstance(error, ScalarT):
             error = np.ones_like(value) * error
-
-        elif not isinstance(error, np.ndarray):
-            msg = f"Unsupported error type (got type(error)={type(error)})"
-            raise TypeError(msg)
 
         elif np.ndim(error) != np.ndim(value) or np.shape(error) != np.shape(value):
             msg = f"Error must have the same shape as value (got value.shape={np.shape(value)}, error.shape={np.shape(error)})"
@@ -380,7 +368,7 @@ class Uncertainty(Generic[T], UncertaintyDisplay):
 
         # Scalar uncertainty
         try:
-            return self._err / abs(self._nom)
+            return cast(T, self._err / abs(self._nom))
         except OverflowError:
             return cast(T, float("inf") if isinstance(self._err, float) else np.inf)
         except ZeroDivisionError:
@@ -438,26 +426,24 @@ class Uncertainty(Generic[T], UncertaintyDisplay):
             return cls(float(u1), float(u2))
 
     @classmethod
-    @overload
-    def from_quantities(cls, value: ValT, error: ErrT | None = ...) -> Uncertainty: ...
-
-    @classmethod
-    @overload
-    def from_quantities(
-        cls, value: PlainQuantity, error: PlainQuantity | ErrT | None = ...
-    ) -> PlainQuantity: ...
-
-    @classmethod
-    @overload
-    def from_quantities(cls, value: ValT, error: PlainQuantity) -> PlainQuantity: ...
-
-    @classmethod
-    def from_quantities(cls, value, error=None) -> PlainQuantity | Uncertainty:
+    def from_quantities(cls, value, error=None):
         """
         Create a `pint.Quantity` object with uncertainty from one or more `~pint.Quantity` objects.
 
+        .. warning::
+
+           Static type inference is hindered when using this method.
+           Call ``Uncertainty(value, error)`` instead for full typing support.
+
         :param value: The central value(s) of the `Uncertainty` object
         :param error: The uncertainty value(s) of the `Uncertainty` object
+
+        .. note::
+
+           It is not necessary (and not advised) to call this method explicitly.
+           Instantiating an `Uncertainty` object with ``Uncertainty(value, error)``
+           will automatically use `from_quantities` if `~pint.Quantity` objects
+           are supplied as parameters.
 
         .. note::
 
@@ -473,17 +459,6 @@ class Uncertainty(Generic[T], UncertaintyDisplay):
 
            * If **only the** ``error`` argument is a `~pint.Quantity`, returns
              a `~pint.Quantity` (wrapped `Uncertainty`) object with the same units as ``error``.
-
-        .. code-block:: python
-           :caption: Example
-
-           >>> from pint import Quantity
-           >>> val = Quantity(2.24, 'kg')
-           >>> err = Quantity(0.208, 'kg')
-           >>> new_quantity = Uncertainty.from_quantities(val, err)
-           >>> new_quantity
-           <Quantity(2.24 +/- 0.208, 'kilogram')>
-
         """
         value_, error_, units = _check_units(value, error)
         instance = cls(value_, error_)
@@ -492,18 +467,58 @@ class Uncertainty(Generic[T], UncertaintyDisplay):
         return instance
 
     @classmethod
-    @deprecated("call Uncertainty() directly instead")
-    def from_sequence(cls, value: ValT, error: ErrT | None = None) -> Uncertainty:
+    def from_sequence(cls, value, error=None):
         """
-        Legacy classmethod for compatibility. Simply calls `__init__`.
+        Creates either an `Uncertainty` object or a `pint.Quantity` object
+        from a supported sequence.
+
+        The primary purpose of this method is to intercept sequences containing
+        `~pint.Quantity` objects, reformat them, and then continue the instantiation
+        process.
 
         .. warning::
 
-           This method is deprecated. Static type inference is hindered when using this method.
+           Static type inference is hindered when using this method.
+           Call ``Uncertainty(value, error)`` instead for full typing support.
 
-           It is better to call ``Uncertainty(value, error)`` instead.
+        :param value: The central value(s)
+        :param error: The uncertainty value(s). Zero if not provided.
+
+        .. note::
+
+           It is not necessary (and not advised) to call this method explicitly.
+           Instantiating an `Uncertainty` object with ``Uncertainty(value, error)``
+           will automatically use `from_sequence` if sequences are supplied as
+           parameters.
         """
-        return cls(value, error)
+        if not isinstance(value, Sequence):
+            return cls(value, error)
+
+        mag_units = err_units = None
+        if len(value) > 0 and hasattr(value[0], "units"):
+            # Converts all values to the same unit.
+            mag_units = value[0].units
+            value = [
+                (item.to(mag_units).m if hasattr(item, "units") else item)
+                for item in value
+            ]
+        if (
+            isinstance(error, Sequence)
+            and len(error) > 0
+            and hasattr(error[0], "units")
+        ):
+            # Convert all error units to value units, if possible. Otherwise, make sure all errors use same units.
+            err_units = error[0].units
+            to_units = err_units if mag_units is None else mag_units
+            error = [
+                (item.to(to_units).m if hasattr(item, "units") else item)
+                for item in error
+            ]
+
+        instance = super().__new__(cls)
+        instance.__init__(value, error, skip=False)
+        units = err_units if mag_units is None else mag_units
+        return instance if units is None else (instance * units)
 
     @classmethod
     @deprecated("call Uncertainty() directly instead")
