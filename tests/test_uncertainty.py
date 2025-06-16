@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import copy
+import itertools
 import locale
 import math
 import operator
@@ -439,6 +440,61 @@ class TestUncertainty:
         assert isinstance(from_quant, Quantity)
         assert isinstance(from_quant.m, Uncertainty)
         assert from_quant.units == Unit("radian")
+
+    def test_init_param_combinations(self):
+        values_scalars = [
+            2,
+            2.5,
+            Uncertainty(0.5, 0.01),
+            Quantity(2, "radian"),
+            Quantity(2.5, "radian"),
+        ]
+        values_sequences = [
+            [1, 2, 3],
+            [1.5, 2.5, 4.5],
+            [Uncertainty(1, 2), Uncertainty(3, 4), Uncertainty(4, 5)],
+            [Quantity(1, "radian"), Quantity(2, "radian"), Quantity(3, "radian")],
+        ]
+        values_arrays = [
+            np.array([1, 2, 3]),
+            np.array([1.5, 2.5, 3.25]),
+        ]
+        errors_scalars = [
+            2,
+            2.5,
+            Quantity(2, "radian"),
+            Quantity(2.5, "radian"),
+            None,
+        ]
+        errors_sequences = [
+            [1, 2, 3],
+            [1.5, 2.5, 3.4],
+            [Quantity(1, "radian"), Quantity(2, "radian"), Quantity(3, "radian")],
+        ]
+        errors_arrays = [
+            np.array([1, 2, 3]),
+            np.array([1.5, 2.5, 3.25]),
+        ]
+
+        # Scalar and scalar case.
+        for val, err in itertools.product(values_scalars, errors_scalars):
+            _ = Uncertainty(val, err)
+
+        # Sequence and scalar case.
+        for val, err in itertools.product(values_sequences, errors_scalars):
+            _ = Uncertainty(val, err)
+
+        # Array and scalar case.
+        for val, err in itertools.product(values_arrays, errors_scalars):
+            _ = Uncertainty(val, err)
+
+        # Sequence and sequence case.
+        for val, err in itertools.product(values_sequences, errors_sequences):
+            _ = Uncertainty(val, err)
+
+        # Array and array case.
+        for val, err in itertools.product(values_arrays, errors_arrays):
+            _ = Uncertainty(val, err)
 
     @pytest.mark.parametrize(
         "val, err, exception",
