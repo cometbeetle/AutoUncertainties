@@ -104,7 +104,20 @@ class Uncertainty(Generic[T], UncertaintyDisplay):
        >>> u2 = Uncertainty([1.4, 2.8, 0.09], [0.1, 0.14, 0.12])
        >>> u3 = Uncertainty([1.4, 2.8, 0.09], 0.1)
        >>> u4 = Uncertainty(u1)
-       # TODO: ADD BETTER USAGE EXAMPLES
+       >>> u5 = Uncertainty(np.array([1.4, 2.8]), np.array([0.1, 0.14]))
+       >>> u6 = Uncertainty(np.array([1.4, 2.8]), 0.1)
+
+       >>> u3.value
+       array([1.4 , 2.8 , 0.09])
+
+       >>> u3.error
+       array([0.1, 0.1, 0.1])
+
+       >>> np.cos(u1) 
+       0.315322 +/- 0.237246
+
+       >>> u4 == u1
+       True
 
     .. code-block:: python
        :caption: Pint Quantity Example
