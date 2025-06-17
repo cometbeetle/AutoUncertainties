@@ -26,6 +26,8 @@ import numpy.typing as npt
 from auto_uncertainties import (
     DowncastError,
     DowncastWarning,
+    EqualityError,
+    EqualityWarning,
     NegativeStdDevError,
     UncertaintyDisplay,
 )
@@ -37,6 +39,7 @@ if TYPE_CHECKING:
 
 
 ERROR_ON_DOWNCAST = False
+ERROR_ON_EQ = False
 COMPARE_RTOL = 1e-9
 
 __all__ = [
@@ -45,8 +48,6 @@ __all__ = [
     "Uncertainty",
     "VectorUncertainty",
     "nominal_values",
-    "set_compare_error",
-    "set_downcast_error",
     "std_devs",
 ]
 
@@ -140,7 +141,8 @@ class Uncertainty(Generic[T], UncertaintyDisplay):
        * If an `Uncertainty` is supplied for ``value``, its ``error`` attribute will
          always override any ``error`` argument (if it is supplied).
 
-       * If the ``value`` parameter is `~numpy.nan`, returns `~numpy.nan` (raw float value).
+       * If the ``error`` parameter is not finite, the resulting `Uncertainty` object
+         will have its ``error`` attribute set to zero.
 
     .. seealso::
 
@@ -164,10 +166,6 @@ class Uncertainty(Generic[T], UncertaintyDisplay):
     @overload
     def __new__(cls, value, error=...) -> Uncertainty: ...
     def __new__(cls, value, error=None):
-        # Return NaN if value is NaN.
-        if isinstance(value, ScalarT) and not np.isfinite(value):
-            return np.nan  # type: ignore
-
         # Use from_quantities if one or more Pint Quantity objects were supplied.
         if _check_units(value, error)[2] is not None:
             return cls.from_quantities(value, error)
@@ -607,7 +605,9 @@ class Uncertainty(Generic[T], UncertaintyDisplay):
     def __mul__(self, other):
         if isinstance(other, Uncertainty):
             new_mag = self._nom * other._nom
-            new_err = np.abs(new_mag) * np.sqrt(self.rel2 + other.rel2)
+            new_err = np.sqrt(
+                (other._nom * self._err) ** 2 + (self._nom * other._err) ** 2
+            )
         elif isinstance(other, self._HANDLED_TYPES):
             new_mag = self._nom * other
             new_err = np.abs(self._err * other)
@@ -624,7 +624,10 @@ class Uncertainty(Generic[T], UncertaintyDisplay):
     def __truediv__(self, other):
         if isinstance(other, Uncertainty):
             new_mag = self._nom / other._nom
-            new_err = np.abs(new_mag) * np.sqrt(self.rel2 + other.rel2)
+            new_err = np.sqrt(
+                (self._err / other._nom) ** 2
+                + (self._nom * other._err / other._nom**2) ** 2
+            )
         elif isinstance(other, self._HANDLED_TYPES):
             new_mag = self._nom / other
             new_err = np.abs(self._err / other)
@@ -782,20 +785,60 @@ class Uncertainty(Generic[T], UncertaintyDisplay):
 
     def __eq__(self, other):
         if self.is_vector:
+            # Compare vector Uncertainty with vector Uncertainty.
             if isinstance(other, Uncertainty):
-                return self._nom == other._nom
-            return self._nom == other
+                result = np.array_equal(self._nom, other._nom)
+                if result and not np.array_equal(self._err, other._err):
+                    msg = "Uncertainty objects have identical values but different standard deviations."
+                    if ERROR_ON_EQ:
+                        raise EqualityError(msg)
+                    else:
+                        warnings.warn(msg, EqualityWarning, stacklevel=2)
+                return result
+
+            # Compare vector Uncertainty with other object.
+            result = np.array_equal(self._nom, other)
+            if result:
+                msg = "Compared Uncertainty object with non-Uncertainty object."
+                if ERROR_ON_EQ:
+                    raise EqualityError(msg)
+                else:
+                    warnings.warn(msg, EqualityWarning, stacklevel=2)
+            return result
+
         else:
+            # Compare scalar Uncertainty wth scalar Uncertainty.
             if isinstance(other, Uncertainty):
                 try:
-                    return math.isclose(self._nom, other._nom, rel_tol=COMPARE_RTOL)
+                    val_result = math.isclose(
+                        self._nom, other._nom, rel_tol=COMPARE_RTOL
+                    )
+                    err_result = math.isclose(
+                        self._err, other._err, rel_tol=COMPARE_RTOL
+                    )
                 except TypeError:
-                    return self._nom == other._nom
-            else:
-                try:
-                    return math.isclose(self._nom, other, rel_tol=COMPARE_RTOL)
-                except TypeError:
-                    return self._nom == other
+                    val_result = self._nom == other._nom
+                    err_result = self._err == other._err
+                if val_result and not err_result:
+                    msg = "Uncertainty objects have identical values but different standard deviations."
+                    if ERROR_ON_EQ:
+                        raise EqualityError(msg)
+                    else:
+                        warnings.warn(msg, EqualityWarning, stacklevel=2)
+                return val_result
+
+            # Compare scalar Uncertainty with other object.
+            try:
+                result = math.isclose(self._nom, other, rel_tol=COMPARE_RTOL)
+            except TypeError:
+                result = self._nom == other
+            if result:
+                msg = "Compared Uncertainty object with non-Uncertainty object."
+                if ERROR_ON_EQ:
+                    raise EqualityError(msg)
+                else:
+                    warnings.warn(msg, EqualityWarning, stacklevel=2)
+            return result
 
     def __round__(self, ndigits):
         if isinstance(self._nom, np.ndarray | np.number):
@@ -1214,17 +1257,6 @@ def std_devs(x: Any) -> UType | Any:
                 return 0.0
             else:
                 return x2.error
-
-
-def set_downcast_error(val: bool) -> None:
-    """Set whether errors occur when uncertainty is stripped."""
-    global ERROR_ON_DOWNCAST
-    ERROR_ON_DOWNCAST = val
-
-
-def set_compare_error(val: float) -> None:  # pragma: no cover
-    global COMPARE_RTOL
-    COMPARE_RTOL = val
 
 
 def _check_units(value, err) -> tuple[Any, Any, Any]:

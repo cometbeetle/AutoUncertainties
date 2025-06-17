@@ -33,7 +33,7 @@ def ignore_runtime_warnings(f):
 
 def ignore_numpy_downcast_warnings(f):
     """
-    A decorator to ignore NumpyDowncastWarning
+    A decorator to ignore `DowncastWarning`.
 
     :param f: The function to wrap
 
