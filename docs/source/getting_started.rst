@@ -15,9 +15,3 @@ Getting Started
 
     pip install auto-uncertainties
 
-* The integration with `pandas` (still WIP) can be enabled by installing `pandas`, either separately or via:
-
-.. code:: bash
-
-    pip install auto-uncertainties[pandas]
-

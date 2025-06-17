@@ -151,13 +151,6 @@ print(type(new_quantity))  # <class 'pint.Quantity'>
 ```
 
 
-## Pandas
-
-Support for `pandas` [@pandas2024] via the `ExtensionArray` mechanism is largely functional. Upcoming
-additions to `AutoUncertainties` will further improve compatibility.
-
-
-
 # Current Limitations and Future Work
 
 ## Dependent Random Variables

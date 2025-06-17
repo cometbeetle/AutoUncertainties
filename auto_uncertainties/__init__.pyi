@@ -1,7 +1,6 @@
 from . import display_format
 from . import exceptions
 from . import numpy
-from . import pandas
 from . import uncertainty
 from . import util
 
@@ -20,12 +19,6 @@ from .exceptions import (
     set_compare_rtol,
     set_downcast_error,
     set_equality_error,
-)
-from .pandas import (
-    UncertaintyArray,
-    UncertaintyDtype,
-    unc_array,
-    unc_dtype,
 )
 from .uncertainty import (
     ScalarUncertainty,
@@ -47,23 +40,18 @@ __all__ = [
     "ScalarUncertainty",
     "UType",
     "Uncertainty",
-    "UncertaintyArray",
     "UncertaintyDisplay",
-    "UncertaintyDtype",
     "VectorDisplay",
     "VectorUncertainty",
     "display_format",
     "exceptions",
     "nominal_values",
     "numpy",
-    "pandas",
     "set_compare_rtol",
     "set_display_rounding",
     "set_downcast_error",
     "set_equality_error",
     "std_devs",
-    "unc_array",
-    "unc_dtype",
     "uncertainty",
     "uncertainty_containers",
     "util",

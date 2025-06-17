@@ -19,10 +19,7 @@ manually, first install the package with testing capabilities:
 .. code-block:: bash
 
    pip install -e .[CI]
-   coverage run -m pytest --cov --cov-report=term --ignore=tests/pandas
-
-
-At the moment, it makes sense to disable the Pandas tests until certain features are finalized.
+   coverage run -m pytest --cov --cov-report=term
 
 
 Documentation

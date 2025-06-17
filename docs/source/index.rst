@@ -37,10 +37,6 @@ Supported Features
     <input type="checkbox" id="arrays" name="arrays" checked disabled />
     <label for="arrays">Arrays, with support for most NumPy ufuncs and functions</label>
   </div>
-  <div>
-    <input type="checkbox" id="pandas" name="pandas" unchecked disabled />
-    <label for="arrays">Pandas Extension Type (see <a href="https://pandas.pydata.org/docs/reference/api/pandas.api.extensions.ExtensionDtype.html">here</a>)</label>
-  </div>
 
 
 Usage
@@ -179,7 +175,6 @@ Indices and Tables
    getting_started
    basic_usage
    numpy_integration
-   pandas_integration
    contribution
 
 .. toctree::

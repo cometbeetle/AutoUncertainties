@@ -43,7 +43,6 @@ a module containing several hand-implemented analogs of the true NumPy functions
 
 - [x] Scalars
 - [x] Arrays, with support for most NumPy ufuncs and functions
-- [ ] Pandas Extension Type (see [here](https://pandas.pydata.org/docs/reference/api/pandas.api.extensions.ExtensionDtype.html))
 
 
 ## Prerequisites
@@ -85,10 +84,8 @@ manually, first install the package with testing capabilities:
 
 ```bash
 pip install -e .[CI]
-coverage run -m pytest --cov --cov-report=term --ignore=tests/pandas
+coverage run -m pytest --cov --cov-report=term
 ```
-
-At the moment, it makes sense to disable the Pandas tests until certain features are finalized.
 
 
 ## Basic Usage
