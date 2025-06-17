@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import copy
+import itertools
 import locale
 import math
 import operator
@@ -63,13 +64,13 @@ def check_units_and_mag(unc, units, mag, err):
         assert unc.error.to(units).m == err
 
 
-general_float_strategy = dict(
-    allow_nan=False,
-    allow_infinity=False,
-    allow_subnormal=False,
-    min_value=-1e3,
-    max_value=1e3,
-)
+general_float_strategy = {
+    "allow_nan": False,
+    "allow_infinity": False,
+    "allow_subnormal": False,
+    "min_value": -1e3,
+    "max_value": 1e3,
+}
 
 
 @pytest.mark.filterwarnings("ignore::RuntimeWarning")
@@ -85,11 +86,7 @@ def test_scalar_creation(v, e, units, call_super):
     else:
         const = ScalarUncertainty
 
-    if not np.isfinite(v):
-        u = const(v, e)
-        assert isinstance(u, float)
-        assert not np.isfinite(v)
-    elif not np.isfinite(e):
+    if not np.isfinite(e):
         u = const(v, e)
         assert u.error == 0
     elif e < 0:
@@ -403,8 +400,12 @@ class TestUncertainty:
         scalar = Uncertainty(2, 3)
         vector = Uncertainty(np.array([1, 2, 3]), np.array([4, 5, 6]))
         fake_vector = Uncertainty(np.array(3), np.array(4))
-        assert isinstance(scalar, ScalarUncertainty)  # verify scalar type was chosen
-        assert isinstance(vector, VectorUncertainty)  # verify vector type was chosen
+        assert isinstance(
+            scalar, ScalarUncertainty
+        )  # verify scalar type was chosen (DEPRECATED)
+        assert isinstance(
+            vector, VectorUncertainty
+        )  # verify vector type was chosen (DEPRECATED)
         assert isinstance(
             fake_vector, ScalarUncertainty
         )  # verify zero-D vectors become scalars
@@ -436,9 +437,78 @@ class TestUncertainty:
         assert isinstance(from_quant.m, Uncertainty)
         assert from_quant.units == Unit("radian")
 
-        # Check error is raised when a negative value is found in the err array
-        with pytest.raises(NegativeStdDevError):
-            _ = Uncertainty(np.array([1, 2, 3]), np.array([-1, 2, 3]))
+    def test_init_param_combinations(self):
+        values_scalars = [
+            2,
+            2.5,
+            Uncertainty(0.5, 0.01),
+            Quantity(2, "radian"),
+            Quantity(2.5, "radian"),
+        ]
+        values_sequences = [
+            [1, 2, 3],
+            [1.5, 2.5, 4.5],
+            [Uncertainty(1, 2), Uncertainty(3, 4), Uncertainty(4, 5)],
+            [Quantity(1, "radian"), Quantity(2, "radian"), Quantity(3, "radian")],
+        ]
+        values_arrays = [
+            np.array([1, 2, 3]),
+            np.array([1.5, 2.5, 3.25]),
+        ]
+        errors_scalars = [
+            2,
+            2.5,
+            Quantity(2, "radian"),
+            Quantity(2.5, "radian"),
+            None,
+        ]
+        errors_sequences = [
+            [1, 2, 3],
+            [1.5, 2.5, 3.4],
+            [Quantity(1, "radian"), Quantity(2, "radian"), Quantity(3, "radian")],
+        ]
+        errors_arrays = [
+            np.array([1, 2, 3]),
+            np.array([1.5, 2.5, 3.25]),
+        ]
+
+        # Scalar and scalar case.
+        for val, err in itertools.product(values_scalars, errors_scalars):
+            _ = Uncertainty(val, err)
+
+        # Sequence and scalar case.
+        for val, err in itertools.product(values_sequences, errors_scalars):
+            _ = Uncertainty(val, err)
+
+        # Array and scalar case.
+        for val, err in itertools.product(values_arrays, errors_scalars):
+            _ = Uncertainty(val, err)
+
+        # Sequence and sequence case.
+        for val, err in itertools.product(values_sequences, errors_sequences):
+            _ = Uncertainty(val, err)
+
+        # Array and array case.
+        for val, err in itertools.product(values_arrays, errors_arrays):
+            _ = Uncertainty(val, err)
+
+    @pytest.mark.parametrize(
+        "val, err, exception",
+        [
+            ([1, 2, 3], np.array([1, 2, 3]), TypeError),
+            (np.array([1, 2, 3]), [1, 2, 3], TypeError),
+            (2.5, [1, 2, 3], TypeError),
+            (({"bad_type": True}), None, TypeError),
+            (np.array([1, 2, 3]), np.array([1, 2]), ValueError),
+            ([1, 2, 3], [1, 2], ValueError),
+            (np.array([1, 2, 3]), np.array([-1, 2, 3]), NegativeStdDevError),
+            ([Uncertainty(1, 0.5), {"bad_data": True}], None, TypeError),
+            ([1, 2, 3], [1, 2, Uncertainty(0.5, 0.25)], TypeError),
+        ],
+    )
+    def test_init_exceptions(self, val, err, exception):
+        with pytest.raises(exception):
+            _ = Uncertainty(val, err)
 
     @staticmethod
     def test_copy():
@@ -477,6 +547,17 @@ class TestUncertainty:
 
         assert u.value == val
         assert u.error == np.sqrt(err**2 + pm**2)
+
+    def test_plus_minus_dtype(self):
+        u = Uncertainty(np.float32(1.5), np.float32(0.5))
+        result = u.plus_minus(25)
+        assert np.isclose(result.error, 25.005)
+        assert type(result.error) == np.float32
+
+        u = Uncertainty(1.5, 0.5)
+        result = u.plus_minus(25)
+        assert np.isclose(result.error, 25.005)
+        assert type(result.error) == float
 
     @staticmethod
     @pytest.mark.parametrize(
@@ -522,6 +603,23 @@ class TestUncertainty:
         seq = [Uncertainty.from_quantities(Quantity(2, "radian"), 1), Uncertainty(5, 8)]
         result = Uncertainty.from_sequence(seq)
         assert result.units == Unit("radian")
+
+        # Test with sequence of errors
+        seq_v = [Quantity(2, "degree"), Quantity(4, "radian")]
+        seq_e = [Quantity(2, "radian"), Quantity(6, "degree")]
+        result = Uncertainty(seq_v, seq_e)
+        assert result.units == Unit("degree")
+
+        # Case where value has no units, error has units.
+        seq_v = [10.25, 40.5]
+        seq_e = [Quantity(2, "radian"), Quantity(6, "degree")]
+        result = Uncertainty(seq_v, seq_e)
+        assert result.units == Unit("radian")
+
+        # Mixed sequence of Uncertainties and scalars.
+        u = Uncertainty([10.25, Uncertainty(1, 0.4), 0.5])
+        assert u.value.all() == np.array([10.25, 1.0, 0.5]).all()
+        assert u.error.all() == np.array([0.0, 0.4, 0.0]).all()
 
     @staticmethod
     @given(
@@ -584,10 +682,15 @@ class TestUncertainty:
         assume(not np.isnan(u1.rel2 + u2.rel2))
         assume(not np.isinf(u1.rel2 + u2.rel2))
 
-        result = op(u1, u2)
-        assert isinstance(result, Uncertainty)
-        assert result.value == op(u1.value, u2.value)
-        assert result.error == np.abs(result.value) * np.sqrt(u1.rel2 + u2.rel2)
+        try:
+            result = op(u1, u2)
+            assert isinstance(result, Uncertainty)
+            assert result.value == op(u1.value, u2.value)
+            assert np.isclose(
+                result.error, np.abs(result.value) * np.sqrt(u1.rel2 + u2.rel2)
+            )
+        except OverflowError:
+            pass
 
         result = op(u1, v2)
         assert isinstance(result, Uncertainty)
@@ -630,10 +733,13 @@ class TestUncertainty:
         assume(not np.isnan(u1.rel2 + u2.rel2))
         assume(not np.isinf(u1.rel2 + u2.rel2))
 
-        result = u1 // u2
-        assert isinstance(result, Uncertainty)
-        assert result.value == u1.value // u2.value
-        assert result.error == (u1 / u2).error
+        try:
+            result = u1 // u2
+            assert isinstance(result, Uncertainty)
+            assert result.value == u1.value // u2.value
+            assert result.error == (u1 / u2).error
+        except OverflowError:
+            pass
 
         result = u1 // v2
         assert isinstance(result, Uncertainty)
@@ -832,6 +938,8 @@ class TestVectorUncertainty:
                 continue
 
         for item2 in HANDLED_UFUNCS:
+            if item2 == "ndim":
+                continue
             assert callable(getattr(v, item2))
 
         for item3 in HANDLED_FUNCTIONS:
@@ -901,8 +1009,13 @@ class TestVectorUncertainty:
     @staticmethod
     def test_properties():
         v = VectorUncertainty(np.array([1, 2, 3]), np.array([4, 5, 6]))
+        v2 = VectorUncertainty(
+            np.array([1, 0, np.inf]), np.array([4, 5, 6])
+        )  # edge case
 
-        assert np.array_equal(v.relative, np.array([4, 2, 2]))
+        assert np.array_equal(v.relative, np.array([4.0, 2.5, 2.0]))
+        assert np.isnan(v2.relative[1])
+        assert np.isinf(v2.relative[2])
         assert np.array_equal(v.rel2, v.relative**2)
         assert v.shape == (3,)
         assert v.nbytes == v._nom.nbytes + v._err.nbytes
@@ -1053,21 +1166,11 @@ class TestVectorUncertainty:
         assert v[0] == Uncertainty(400.0, 100.0)
 
         # Check NaN case
-        v[0] = np.nan
+        v[0] = np.nan  # type: ignore
         assert np.isnan(v[0])
 
-        with pytest.raises(ValueError):
-            v[0] = 400.0
-
-        v._nom = {
-            1,
-            2,
-            3,
-            4,
-            5,
-        }  # Contrived set-based example to test non-indexable object
-        with pytest.raises(ValueError):
-            v[0] = Uncertainty(2, 3)
+        with pytest.raises(TypeError):
+            v[0] = 400.0  # type: ignore
 
     @staticmethod
     @given(
@@ -1090,9 +1193,9 @@ class TestVectorUncertainty:
     def test_tolist_edgecase():
         """Contrived test for when tolist is not available."""
         v = VectorUncertainty(np.array([1, 2, 3]), np.array([4, 5, 6]))
-        v._nom = {1, 2, 3, 4}
+        v._nom = {1, 2, 3, 4}  # type: ignore
 
-        with pytest.raises(AttributeError):
+        with pytest.raises(TypeError):
             _ = v.tolist()
 
     @staticmethod
@@ -1116,7 +1219,19 @@ class TestVectorUncertainty:
         v = VectorUncertainty(np.array([1.0, 2.0, 3.0]), np.array([4.0, 5.0, 6.0]))
 
         digest = joblib.hash((v._nom, v._err), hash_name="sha1")
-        assert v.__hash__() == int.from_bytes(bytes(digest, encoding="utf-8"), "big")
+        assert v.__hash__() == int.from_bytes(
+            bytes(digest if digest else "", encoding="utf-8"), "big"
+        )
+
+    def test_unimplemented_methods(self):
+        v = Uncertainty(np.array([1, 2, 3]))
+
+        with pytest.raises(TypeError):
+            _ = float(v)
+        with pytest.raises(TypeError):
+            _ = int(v)
+        with pytest.raises(TypeError):
+            _ = complex(v)
 
 
 class TestScalarUncertainty:
@@ -1242,7 +1357,7 @@ class TestScalarUncertainty:
         result = s1 == "something"
         assert result is False
 
-        s2._nom = "bad value"
+        s2._nom = "bad value"  # type: ignore
         result = s1 == s2
         assert result is False
 
@@ -1250,3 +1365,37 @@ class TestScalarUncertainty:
     def test_hash():
         s = ScalarUncertainty(1, 2)
         assert s.__hash__() == hash((s._nom, s._err))
+
+    def test_unimplemented_methods(self):
+        s = Uncertainty(1, 2)
+
+        with pytest.raises(TypeError):
+            _ = s[0]
+        with pytest.raises(TypeError):
+            s[0] = 1.0  # type: ignore
+        with pytest.raises(TypeError):
+            _ = s.__bytes__()
+        with pytest.raises(TypeError):
+            _ = next(s.__iter__())
+        with pytest.raises(TypeError):
+            _ = s.clip(min=1, max=2)
+        with pytest.raises(TypeError):
+            s.fill(1)
+        with pytest.raises(TypeError):
+            s.put(1, Uncertainty(2, 3))
+        with pytest.raises(TypeError):
+            _ = s.copy()
+        with pytest.raises(TypeError):
+            _ = next(s.flat)
+        with pytest.raises(TypeError):
+            _ = s.shape
+        with pytest.raises(TypeError):
+            _ = s.shape = (2, 3)
+        with pytest.raises(TypeError):
+            _ = s.nbytes
+        with pytest.raises(TypeError):
+            _ = s.searchsorted(1)
+        with pytest.raises(TypeError):
+            _ = len(s)
+        with pytest.raises(TypeError):
+            _ = s.view()

@@ -1,25 +1,24 @@
 from . import display_format
 from . import exceptions
 from . import numpy
-from . import pandas
 from . import uncertainty
 from . import util
 
 from .display_format import (
     ScalarDisplay,
+    UncertaintyDisplay,
     VectorDisplay,
     set_display_rounding,
 )
 from .exceptions import (
     DowncastError,
     DowncastWarning,
+    EqualityError,
+    EqualityWarning,
     NegativeStdDevError,
-)
-from .pandas import (
-    UncertaintyArray,
-    UncertaintyDtype,
-    unc_array,
-    unc_dtype,
+    set_compare_rtol,
+    set_downcast_error,
+    set_equality_error,
 )
 from .uncertainty import (
     ScalarUncertainty,
@@ -27,8 +26,6 @@ from .uncertainty import (
     Uncertainty,
     VectorUncertainty,
     nominal_values,
-    set_compare_error,
-    set_downcast_error,
     std_devs,
     uncertainty_containers,
 )
@@ -36,26 +33,25 @@ from .uncertainty import (
 __all__ = [
     "DowncastError",
     "DowncastWarning",
+    "EqualityError",
+    "EqualityWarning",
     "NegativeStdDevError",
     "ScalarDisplay",
     "ScalarUncertainty",
     "UType",
     "Uncertainty",
-    "UncertaintyArray",
-    "UncertaintyDtype",
+    "UncertaintyDisplay",
     "VectorDisplay",
     "VectorUncertainty",
     "display_format",
     "exceptions",
     "nominal_values",
     "numpy",
-    "pandas",
-    "set_compare_error",
+    "set_compare_rtol",
     "set_display_rounding",
     "set_downcast_error",
+    "set_equality_error",
     "std_devs",
-    "unc_array",
-    "unc_dtype",
     "uncertainty",
     "uncertainty_containers",
     "util",
