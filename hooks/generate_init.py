@@ -32,6 +32,7 @@ def make_init():
         recursive=True,
     )
     subprocess.run(["ruff", "format"])
+    subprocess.run(["ruff", "check", "--select=RUF022", "--fix"])  # sorts imports
 
 
 if __name__ == "__main__":

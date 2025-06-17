@@ -3,11 +3,17 @@ from __future__ import annotations
 import decimal
 import math
 
-from numpy.typing import NDArray
+import numpy as np
+import numpy.typing as npt
 
 ROUND_ON_DISPLAY = False
 
-__all__ = ["ScalarDisplay", "VectorDisplay", "set_display_rounding"]
+__all__ = [
+    "ScalarDisplay",
+    "UncertaintyDisplay",
+    "VectorDisplay",
+    "set_display_rounding",
+]
 
 
 def set_display_rounding(val: bool):
@@ -16,71 +22,30 @@ def set_display_rounding(val: bool):
     ROUND_ON_DISPLAY = val
 
 
-class VectorDisplay:
+class UncertaintyDisplay:
     default_format: str = ""
-    _nom: NDArray
-    _err: NDArray
+    _nom: npt.NDArray[np.floating] | np.floating | float
+    _err: npt.NDArray[np.floating] | np.floating | float
 
     def _repr_html_(self):
         val_ = self._nom
         err_ = self._err
-        header = "<table><tbody>"
-        footer = "</tbody></table>"
-        vformatted = []
-        eformatted = []
-        for v, e in zip(val_.ravel(), err_.ravel(), strict=False):
-            vformat, eformat = pdg_round(v, e, return_zero=True)
-            vformatted.append(vformat)
-            eformatted.append(eformat)
-        val = f"<tr><th>Magnitude</th><td style='text-align:left;'><pre>{', '.join(vformatted)}</pre></td></tr>"
-        err = f"<tr><th>Error</th><td style='text-align:left;'><pre>{', '.join(eformatted)}</pre></td></tr>"
 
-        return header + val + err + footer
+        # Vector uncertainty
+        if isinstance(val_, np.ndarray) and isinstance(err_, np.ndarray):
+            header = "<table><tbody>"
+            footer = "</tbody></table>"
+            vformatted = []
+            eformatted = []
+            for v, e in zip(val_.ravel(), err_.ravel(), strict=False):
+                vformat, eformat = pdg_round(v, e, return_zero=True)
+                vformatted.append(vformat)
+                eformatted.append(eformat)
+            val = f"<tr><th>Magnitude</th><td style='text-align:left;'><pre>{', '.join(vformatted)}</pre></td></tr>"
+            err = f"<tr><th>Error</th><td style='text-align:left;'><pre>{', '.join(eformatted)}</pre></td></tr>"
+            return header + val + err + footer
 
-    def _repr_latex_(self):
-        val_ = self._nom
-        err_ = self._err
-        s = []
-        for v, e in zip(val_.ravel(), err_.ravel(), strict=False):
-            vformat, eformat = pdg_round(v, e, return_zero=True)
-            s.append(f"{vformat} \\pm {eformat}")
-        s = ", ".join(s) + "~"
-        header = "$"
-        footer = "$"
-        return header + s + footer
-
-    def __str__(self) -> str:
-        val_ = self._nom
-        err_ = self._err
-
-        s = []
-        for v, e in zip(val_.ravel(), err_.ravel(), strict=False):
-            vformat, eformat = pdg_round(v, e, return_zero=True)
-            s.append(f"{vformat} +/- {eformat}")
-        return "[" + ", ".join(s) + "]"
-
-    def __format__(self, fmt):
-        val_ = self._nom
-        err_ = self._err
-        s = []
-        for v, e in zip(val_.ravel(), err_.ravel(), strict=False):
-            vformat, eformat = pdg_round(v, e, format_spec=fmt, return_zero=True)
-            s.append(f"{vformat} +/- {eformat}")
-
-        return "[" + ", ".join(s) + "]"
-
-    def __repr__(self) -> str:
-        return str(self)
-
-
-class ScalarDisplay:
-    default_format: str = ""
-    _nom: float | int
-    _err: float | int
-
-    def _repr_html_(self):
-        val_ = self._nom
-        err_ = self._err
+        # Scalar uncertainty
         vformat, eformat = pdg_round(val_, err_)
         if eformat == "":
             return f"{vformat}"
@@ -90,6 +55,19 @@ class ScalarDisplay:
     def _repr_latex_(self):
         val_ = self._nom
         err_ = self._err
+
+        # Vector uncertainty
+        if isinstance(val_, np.ndarray) and isinstance(err_, np.ndarray):
+            s = []
+            for v, e in zip(val_.ravel(), err_.ravel(), strict=False):
+                vformat, eformat = pdg_round(v, e, return_zero=True)
+                s.append(f"{vformat} \\pm {eformat}")
+            s = ", ".join(s) + "~"
+            header = "$"
+            footer = "$"
+            return header + s + footer
+
+        # Scalar uncertainty
         vformat, eformat = pdg_round(val_, err_)
         if eformat == "":
             return f"{vformat}"
@@ -100,6 +78,15 @@ class ScalarDisplay:
         val_ = self._nom
         err_ = self._err
 
+        # Vector uncertainty
+        if isinstance(val_, np.ndarray) and isinstance(err_, np.ndarray):
+            s = []
+            for v, e in zip(val_.ravel(), err_.ravel(), strict=False):
+                vformat, eformat = pdg_round(v, e, return_zero=True)
+                s.append(f"{vformat} +/- {eformat}")
+            return "[" + ", ".join(s) + "]"
+
+        # Scalar uncertainty
         vformat, eformat = pdg_round(val_, err_)
         if eformat == "":
             return f"{vformat}"
@@ -110,6 +97,15 @@ class ScalarDisplay:
         val_ = self._nom
         err_ = self._err
 
+        if isinstance(val_, np.ndarray) and isinstance(err_, np.ndarray):
+            s = []
+            for v, e in zip(val_.ravel(), err_.ravel(), strict=False):
+                vformat, eformat = pdg_round(v, e, format_spec=fmt, return_zero=True)
+                s.append(f"{vformat} +/- {eformat}")
+
+            return "[" + ", ".join(s) + "]"
+
+        # Scalar uncertainty
         vformat, eformat = pdg_round(val_, err_, format_spec=fmt, return_zero=True)
         if eformat == "":
             return f"{vformat}"
@@ -118,6 +114,11 @@ class ScalarDisplay:
 
     def __repr__(self) -> str:
         return str(self)
+
+
+# Kept for compatibility.
+ScalarDisplay = UncertaintyDisplay
+VectorDisplay = UncertaintyDisplay
 
 
 # From https://github.com/lmfit/uncertainties/blob/master/uncertainties/core.py

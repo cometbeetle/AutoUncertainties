@@ -19,30 +19,30 @@ affiliations:
    index: 1
 
 bibliography: paper.bib
-date: 7 February 2025
+date: 21 May 2025
 ---
 
 # Summary
 
 Propagation of uncertainties is of great utility in the experimental sciences.
-While the rules of (linear) uncertainty propagation are simple, managing many 
+While the rules of (linear) uncertainty propagation are straightforward, managing many 
 variables with uncertainty information can quickly become complicated in large 
-scientific software stacks, and require keeping track of many variables and 
-implementing custom error propagation rules for each mathematical operator. 
+scientific software stacks. Often, this requires programmers to keep track of many variables 
+and implement custom error propagation rules for each mathematical operator and function. 
 The Python package `AutoUncertainties`, described here, provides a solution to this problem.
 
 
 # Statement of Need
 
-`AutoUncertainties` is Python package for uncertainty propagation. It provides
-a drop-in mechanism to add uncertainty information to Python scalar and `NumPy`
-[@harris2020array] array variables. It implements manual propagation rules for the Python dunder
-math methods, and uses automatic differentiation via `JAX` [@jax2018github] to propagate uncertainties
-for most `NumPy` methods applied to both scalar and `NumPy` array variables. In doing so,
-it eliminates the need for carrying around additional uncertainty variables,
-needing to implement custom propagation rules for any `NumPy` operator with a gradient
-rule implemented by `JAX`, and in most cases requires minimal modification to existing code,
-typically only when uncertainties are attached to central values.
+`AutoUncertainties` is a Python package for uncertainty propagation of independent and identically
+distributed (i.i.d.) random variables. It provides a drop-in mechanism to add uncertainty information 
+to Python scalar and `NumPy` [@harris2020array] array objects. It implements manual propagation rules 
+for the Python dunder math methods, and uses automatic differentiation via `JAX` [@jax2018github] to propagate 
+uncertainties for most `NumPy` methods applied to both scalar and `NumPy` array variables. In doing so,
+it eliminates the need for carrying around additional uncertainty variables or for implementing custom
+propagation rules for any `NumPy` operator with a gradient rule implemented by `JAX`. Furthermore, in 
+most cases, it requires minimal modification to existing code—typically only when uncertainties are 
+attached to central values.
 
 
 # Prior Work
@@ -50,31 +50,29 @@ typically only when uncertainties are attached to central values.
 To the author's knowledge, the only existing error propagation library in Python is the `uncertainties` 
 [@lebigot2024] package, which inspired the current work. While extremely useful, the `uncertainties` 
 package relies on hand-implemented rules and functions for uncertainty propagation of array and scalar data. 
-While this is transparent for the intrinsic dunder methods such as `__add__`, it becomes problematic for advanced 
-mathematical operators. For instance, calculating the uncertainty propagation due to the cosine requires the 
-import of separate math libraries
+This is mostly trivial for Python's intrinsic arithmetic and logical operations such as `__add__`, however it becomes 
+problematic for more advanced mathematical operations. For instance, calculating the uncertainty propagation due to 
+the cosine function requires the import of separate math libraries, rather than being able to use `NumPy` directly.
 
 ```python
+# Using uncertainties v3.2.3
 import numpy as np
 from uncertainties import unumpy, ufloat
 arr = np.array([ufloat(1, 0.1), ufloat(2, 0.002)])
 unumpy.cos(arr)  # calculation succeeds
+np.cos(arr)      # raises an exception
 ```
 
-rather than being able to use `NumPy` directly.
-
-```python
-import numpy as np
-from uncertainties import ufloat
-arr = np.array([ufloat(1, 0.1), ufloat(2, 0.002)])
-np.cos(arr)  # raises an exception
-```
+The example above illustrates a primary limitation of the `uncertainties` package: arrays of 
+`ufloat` objects cannot be seamlessly integrated with common `NumPy` functions, and can only
+be operated on by the `unumpy` suite of functions.
 
 
 # Implementation
 
-Linear uncertainty propagation of a function $f(x) : \mathbb{R}^n \rightarrow \mathbb{R}^m$ can be computed
-via the simple rule $$ \delta f_j (x)^2 = \left ( \dfrac{\partial f_j}{\partial x_i}\left( x \right ) \delta x_i  \right ) ^2. $$
+For a function $f : \mathbb{R}^n \rightarrow \mathbb{R}^m$ of $n$ i.i.d. 
+variables, linear uncertainty propagation can be computed via the simple rule 
+$$ \delta f_j (\mathbf x)^2 = \sum_i^n \left(\dfrac{\partial f_j}{\partial x_i} \delta x_i \right)^2, \quad\quad j \in [1, m].$$
 
 To compute $\dfrac{\partial f_j}{\partial x_i}$ for arbitrary $f$, the implementation in `AutoUncertainties` relies on
 automatic differentiaion provided by `JAX`. Calls to any `NumPy` array function or universal function (ufunc) are 
@@ -85,11 +83,9 @@ The user API for the `Uncertainty` object exposes a number of properties and met
 important are:
 
 - `value -> float`: The central value of the object.
-- `error -> float`: The error of the object.
+- `error -> float`: The error (standard deviation) of the object.
 - `relative -> float`: The relative error (i.e. error / value) of the object.
 - `plus_minus(self, err: float) -> Uncertainty`: Adds error (in quadrature).
-- `from_sequence(cls, seq: Sequence) -> VectorUncertainty`: Constructs an array `Uncertainty` object 
-  from some existing sequence.
 
 These attributes and methods can be used in the following manner:
 
@@ -104,36 +100,34 @@ print(u1.error)            # 0.75
 print(u1.relative)         # 0.142857
 print(u1.plus_minus(0.5))  # 5.25 +/- 0.901388
 
-seq = Uncertainty.from_sequence([u1, u2])
-print(seq)  # [5.25 +/- 0.75, 1.85 +/- 0.4]
+# Construct a vector Uncertainty from a sequence.
+seq = Uncertainty([u1, u2]) 
+print(seq.value)  # [5.25 1.85]
+print(seq.error)  # [0.75 0.4 ]
 ```
 
-To extract errors / central values from arbitrary objects, the accessors `nominal_values` and `std_devs` are provided. 
-These functions return:
-
-- The central values and errors, respectively, if the input is an `Uncertainty` object.
-- The input and zero if the input is any other kind of object.
-
-`Uncertainty` objects are displayed using rounding rules based on the uncertainty, i.e.,
-
-- Error to 2 significant digits.
-- Central value to first signficant digit of error, or two significant figures (whichever is more significant digits).
-
-This behavior can be toggled using `set_display_rounding`:
+Of course, one of the most important aspects of `AutoUncertainties` is its seamless support for `NumPy`:
 
 ```python
-from auto_uncertainties import set_display_rounding
-set_display_rounding(False)
+import numpy as np
+from auto_uncertainties import Uncertainty
+vals = np.array([0.5, 0.75])
+errs = np.array([0.05, 0.3])
+u = Uncertainty(vals, errs)
+
+print(np.cos(u))  # [0.877583 +/- 0.0239713, 0.731689 +/- 0.204492]
 ```
 
-Calling `__array__`, whether via `numpy.array` or any other method, will by default issue a warning, and convert
-the `Uncertainty` object into an equivalent array of its nominal values, stripping all error information. To prevent 
-this behavior, the `set_downcast_error` function can be called so that an exception is raised instead:
+This is in contrast to the `uncertainties` package, which would have necessitated using the 
+`unumpy` module of hand-implemented `NumPy` function analogs.
 
-```python
-from auto_uncertainties import set_downcast_error
-set_downcast_error(True)
-```
+The `Uncertainty` class automatically determines which methods should be implemented based on 
+whether it represents a vector uncertainty, or a scalar uncertainty. When instantiated with
+sequences or `NumPy` arrays, vector-based operations are enabled; when instantiated with scalars,
+only scalar operations are permitted. 
+
+`AutoUncertainties` also provides certain exceptions, helper functions, accessors, and display 
+rounding adjustors, whose details can be found in the [documentation](https://autouncertainties.readthedocs.io/en/latest/). 
 
 
 ## Support for Pint
@@ -157,86 +151,30 @@ print(type(new_quantity))  # <class 'pint.Quantity'>
 ```
 
 
-## Pandas
-
-Support for `pandas` [@pandas2024] via the `ExtensionArray` mechanism is largely functional. Upcoming
-aditions to `AutoUncertainties` will further improve compatibility.
-
-
-
 # Current Limitations and Future Work
 
 ## Dependent Random Variables
 
 To simplify operations on `Uncertainty` objects, `AutoUncertainties` assumes all variables are independent
 and normally distributed. This means that, in the case where the programmer assumes dependence
-between two or more `Uncertainty` objects, unexpected and counter-intuitive behavior may arise. Two examples
-of this behavior follow.
+between two or more `Uncertainty` objects, unexpected and counter-intuitive behavior may arise during 
+uncertainty propagation. This is a common pitfall when working with `Uncertainty` objects, especially since 
+the package will not prevent users from manipulating variables in a manner that implies dependence. Examples 
+of this behavior, along with certain potential workarounds, can be found [here](https://autouncertainties.readthedocs.io/en/latest/index.html#current-limitations-and-future-work) 
+in the documentation. In general, most binary operations involving the same variable twice will 
+produce undesired results (for instance, performing `X - X`, where `X` is an `Uncertainty` object, will
+*not* result in a standard deviation of zero).
 
-### Subtracting Equivalent Uncertainties
-
-Subtracting an `Uncertainty` from itself will not result in a standard devation of zero, as demonstrated
-in the following example: 
-
-```python
-x = Uncertainty(5.0, 0.5)
-print(x - x)  # 0 +/- 0.707107
-```
-
-### Mean Error Propagation
-
-When multiplying a vector by a scalar `Uncertainty` object, each component of the resulting vector 
-is assumed to be a multivariate normal distribution with no covariance, 
-which may not be the desired behavior. For instance, taking the mean of such a 
-vector will return an `Uncertainty` object with an unexpectedly small standard deviation. 
-
-```python
-u = Uncertainty(5.0, 0.5)
-arr = np.ones(10) * 10
-result = np.mean(u * arr)  # 50 +/- 1.58114, rather than 50 +/- 5 as expected
-```
-
-To obtain the uncertainty corresponding to the case where each element of the array is fully correlated, 
-two workaround techniques can be used:
-
-1. Separate the central value from the relative error, multiply the vector by the central value, take the mean
-   of the resulting vector, and then multiply by the previously stored relative error.
-
-   ```python
-   u = Uncertainty(5.0, 0.5)
-   scale_error = Uncertainty(1, u.relative)  # collect relative error
-   scale_value = u.value                     # collect central value
-
-   arr = np.ones(10) * 10
-   result = np.mean(scale_value * arr) * scale_error  # 50 +/- 5
-   ```
-
-2. Take the mean of the vector, and then multiply by the `Uncertainty`:
-
-   ```python
-   u = Uncertainty(5.0, 0.5)
-   arr = np.ones(10) * 10
-   result = u * np.mean(arr)  # 50 +/- 5
-   ```
-
-These workarounds are nevertheless cumbersome, and cause `AutoUncertainties` to fall somewhat short of the original
+The workarounds are nevertheless cumbersome, and cause `AutoUncertainties` to fall somewhat short of the original
 goals of automated error propagation. In principle, this could be addressed by storing a full computational
 graph of the result of chained operations, similar to what is done in `uncertainties`. However, the complexity
 of such a system places it out of scope for `AutoUncertainties` at this time.
 
 
-## Typing System
-
-Type hinting is employed throughout `AutoUncertainties` to aid static analysis of the package. At this time,
-however, many typing inconsistencies can be detected by static type enforcement tools like 
-[Mypy](https://mypy-lang.org/) and [Pyright](https://microsoft.github.io/pyright/). Future improvements 
-to `AutoUncertainties` will likely include typing adjustments to the code, in order to avoid subtle bugs.
-
-
 
 # Further Information
 
-Additional API information and usage examples can be found on the 
+Full API information and additional usage examples can be found on the 
 [documentation website](https://autouncertainties.readthedocs.io/en/latest/). All source
 code for the project is stored and maintained on the `AutoUncertainties` 
 [GitHub repository](https://github.com/varchasgopalaswamy/AutoUncertainties), where 

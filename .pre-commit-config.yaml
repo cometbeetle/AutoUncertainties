@@ -9,6 +9,13 @@ repos:
     require_serial: true 
     entry: python hooks/fix_line_endings.py
     types: ["text"]
+
+  - id: generate-init
+    name: Generates __init__.py files
+    language: python
+    entry: python hooks/generate_init.py
+    require_serial: true
+    additional_dependencies: ["mkinit", "ruff"]
     
 - repo: https://github.com/pre-commit/pre-commit-hooks
   rev: v5.0.0

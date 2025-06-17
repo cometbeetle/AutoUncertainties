@@ -23,27 +23,14 @@ The goal is to have minimal changes to your code in order to enable uncertainty 
      >>> value = np.linspace(start=0, stop=10, num=5)
      >>> error = np.ones_like(value)*0.1
      >>> u = Uncertainty(value, error)
+     >>> u
+     [0 +/- 0.1, 2.5 +/- 0.1, 5 +/- 0.1, 7.5 +/- 0.1, 10 +/- 0.1]
 
-  - (though, they are actually different classes!)
 
-    .. code-block:: python
-
-       >>> from auto_uncertainties import Uncertainty
-       >>> value = 1.0
-       >>> error = 0.1
-       >>> u = Uncertainty(value, error)
-       >>> type(u)
-       <class 'auto_uncertainties.uncertainty.uncertainty_containers.ScalarUncertainty'>
-
-    .. code-blocK:: python
-
-       >>> from auto_uncertainties import Uncertainty
-       >>> import numpy as np
-       >>> value = np.linspace(start=0, stop=10, num=5)
-       >>> error = np.ones_like(value)*0.1
-       >>> u = Uncertainty(value, error)
-       >>> type(u)
-       <class 'auto_uncertainties.uncertainty.uncertainty_containers.VectorUncertainty'>
+  The `~auto_uncertainties.uncertainty.uncertainty_containers.Uncertainty` class automatically determines
+  which methods should be implemented based on whether it represents a vector uncertainty, or a scalar
+  uncertainty. When instantiated with a sequence or `numpy` array, vector-based operations are enabled;
+  when instantiated with scalars, only scalar operations are permitted.
 
 * Scalar uncertainties implement all mathematical and logical
   `dunder methods <https://docs.python.org/3/reference/datamodel.html#object.__repr__>`_ explicitly using linear
@@ -106,31 +93,40 @@ The goal is to have minimal changes to your code in order to enable uncertainty 
      >>> std_devs(v)
      0.0
 
-* Displayed values are automatically rounded according to the Particle Data Group standard.
-  This can be turned off using `~auto_uncertainties.display_format.set_display_rounding`:
+* Displayed values are automatically rounded according to the `g` format specifier. To enable
+  rounding consistent with the Particle Data Group (PDG) standard, the `~auto_uncertainties.display_format.set_display_rounding`
+  function can be called as follows:
 
   .. code-block:: python
 
-     >>> from auto_uncertainties import set_display_rounding
-     >>> set_display_rounding(False)
-     >>> from auto_uncertainties import Uncertainty
+     >>> from auto_uncertainties import Uncertainty, set_display_rounding
      >>> import numpy as np
      >>> value = np.linspace(start=0, stop=10, num=5)
      >>> error = np.ones_like(value)*0.1
      >>> u = Uncertainty(value, error)
+     >>> set_display_rounding(True)   # enable PDG rules
+     >>> np.sum(u)
+     25.0 +/- 0.22
+     >>> set_display_rounding(False)  # default behavior
      >>> np.sum(u)
      25 +/- 0.223607
 
+  \
+  If enabled, the PDG rounding rules will, in general, cause `Uncertainty` objects to be displayed with:
+   
+  - Error to 2 significant digits.
+  - Central value to first signficant digit of error, or two significant figures (whichever is more 
+    significant digits).
+
 * If `numpy.array` is called on an `~auto_uncertainties.uncertainty.uncertainty_containers.Uncertainty` object, it will
-  automatically get cast down to a `numpy` array (and lose uncertainty information!), and emit a warning.
-  To make this an error, use `~auto_uncertainties.uncertainty.uncertainty_containers.set_downcast_error`:
+  automatically get cast down to a `numpy` array (losing all uncertainty information!), and emit a warning.
+  To force an exception to be raised instead, use `~auto_uncertainties.uncertainty.uncertainty_containers.set_downcast_error`:
 
   .. code-block:: python
 
-     >>> from auto_uncertainties import set_downcast_error
-     >>> set_downcast_error(True)
-     >>> from auto_uncertainties import Uncertainty
+     >>> from auto_uncertainties import Uncertainty, set_downcast_error
      >>> import numpy as np
+     >>> set_downcast_error(True)
      >>> value = np.linspace(start=0, stop=10, num=5)
      >>> error = np.ones_like(value)*0.1
      >>> u = Uncertainty(value, error)
