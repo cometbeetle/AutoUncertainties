@@ -23,18 +23,19 @@ import pytest
 from auto_uncertainties import (
     DowncastError,
     DowncastWarning,
+    EqualityError,
+    EqualityWarning,
     NegativeStdDevError,
-    set_downcast_error,
-)
-from auto_uncertainties.numpy import HANDLED_FUNCTIONS, HANDLED_UFUNCS
-from auto_uncertainties.uncertainty.uncertainty_containers import (
     ScalarUncertainty,
     Uncertainty,
     VectorUncertainty,
-    _check_units,
     nominal_values,
+    set_downcast_error,
+    set_equality_error,
     std_devs,
 )
+from auto_uncertainties.numpy import HANDLED_FUNCTIONS, HANDLED_UFUNCS
+from auto_uncertainties.uncertainty.uncertainty_containers import _check_units
 
 BINARY_OPS = [
     operator.lt,
@@ -780,23 +781,23 @@ class TestUncertainty:
         result = u1 % u2
         assert isinstance(result, Uncertainty)
         assert result.value == u1.value % u2.value
-        assert result.error == 0.0
+        assert result.error == u1.error
 
         result = u1 % v2
         assert isinstance(result, Uncertainty)
         assert result.value == u1.value % v2
-        assert result.error == 0.0
+        assert result.error == u1.error
 
         # Reverse case
         result = v2 % u1
         assert isinstance(result, Uncertainty)
         assert result.value == v2 % u1.value
-        assert result.error == 0.0
+        assert result.error == u1.error
 
         # Reverse case w/ vector edge case
         result = v2 % Uncertainty(np.array([v1, v1, v1]), np.array([e1, e1, e1]))
         assert isinstance(result, Uncertainty)
-        assert np.array_equal(result.error, np.array([0.0, 0.0, 0.0]))
+        assert np.array_equal(result.error, np.array([e1, e1, e1]))
 
         u1 = Uncertainty(np.array([v1, v2]), np.array([e1, e2]))
         result = u1 % np.array([1, 2])
@@ -886,6 +887,17 @@ class TestUncertainty:
         u = Uncertainty(v, e)
         assert (-u).value == -v
         assert (-u).error == e
+
+    @staticmethod
+    @given(
+        arr1=hnp.arrays(np.float64, (3,), elements=st.floats(**general_float_strategy)),
+        arr2=hnp.arrays(
+            np.float64, (3,), elements=st.floats(min_value=0, max_value=1e3)
+        ),
+    )
+    def test_bytes(arr1, arr2):
+        v = VectorUncertainty(arr1, arr2)
+        assert v.__bytes__() == str(v).encode(locale.getpreferredencoding())
 
     @staticmethod
     def test_not_implemented_ops():
@@ -982,16 +994,23 @@ class TestVectorUncertainty:
         result = v1 == arr1
         assert np.all(result)
 
-    @staticmethod
-    @given(
-        arr1=hnp.arrays(np.float64, (3,), elements=st.floats(**general_float_strategy)),
-        arr2=hnp.arrays(
-            np.float64, (3,), elements=st.floats(min_value=0, max_value=1e3)
-        ),
-    )
-    def test_bytes(arr1, arr2):
-        v = VectorUncertainty(arr1, arr2)
-        assert v.__bytes__() == str(v).encode(locale.getpreferredencoding())
+    def test_eq_exceptions(self):
+        s1 = Uncertainty([1, 2, 3], [0, 0, 1])
+        s2 = Uncertainty([1, 2, 3], [0, 0, 0])
+
+        with pytest.warns(EqualityWarning):
+            _ = s1 == s2
+        with pytest.warns(EqualityWarning):
+            _ = s1 == np.array([1.0, 2.0, 3.0])
+
+        set_equality_error(True)
+
+        with pytest.raises(EqualityError):
+            _ = s1 == s2
+        with pytest.raises(EqualityError):
+            _ = s1 == np.array([1.0, 2.0, 3.0])
+
+        set_equality_error(False)
 
     @staticmethod
     @given(
@@ -1361,6 +1380,23 @@ class TestScalarUncertainty:
         result = s1 == s2
         assert result is False
 
+    def test_eq_exceptions(self):
+        s1 = Uncertainty(1, 2)
+        s2 = Uncertainty(1, 3)
+        with pytest.warns(EqualityWarning):
+            _ = s1 == s2
+        with pytest.warns(EqualityWarning):
+            _ = s1 == 1.0
+
+        set_equality_error(True)
+
+        with pytest.raises(EqualityError):
+            _ = s1 == s2
+        with pytest.raises(EqualityError):
+            _ = s1 == 1.0
+
+        set_equality_error(False)
+
     @staticmethod
     def test_hash():
         s = ScalarUncertainty(1, 2)
@@ -1373,8 +1409,6 @@ class TestScalarUncertainty:
             _ = s[0]
         with pytest.raises(TypeError):
             s[0] = 1.0  # type: ignore
-        with pytest.raises(TypeError):
-            _ = s.__bytes__()
         with pytest.raises(TypeError):
             _ = next(s.__iter__())
         with pytest.raises(TypeError):
