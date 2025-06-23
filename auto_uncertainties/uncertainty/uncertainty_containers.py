@@ -93,8 +93,10 @@ def _unsupported_type(t: str):
 
     return decorator
 
+
 ErrT: TypeAlias = ScalarT | Sequence[ScalarT] | npt.NDArray[np.number]
 """Types supported in the ``error`` parameter of the `Uncertainty` constructor."""
+
 
 class Uncertainty(Generic[T], UncertaintyDisplay):
     """
