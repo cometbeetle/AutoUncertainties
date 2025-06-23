@@ -56,14 +56,14 @@ Quick Reference
 Statement of Need
 -----------------
 
-AutoUncertainties is a Python package for uncertainty propagation of independent and identically
-distributed (i.i.d.) random variables. It provides a drop-in mechanism to add uncertainty information 
-to Python scalar and NumPy array objects. It implements manual propagation rules for the 
-Python dunder math methods, and uses automatic differentiation via JAX to propagate 
-uncertainties for most NumPy methods applied to both scalar and NumPy array variables. In doing so,
-it eliminates the need for carrying around additional uncertainty variables or for implementing custom
-propagation rules for any NumPy operator with a gradient rule implemented by JAX. In  most cases, 
-it requires minimal modification to existing code—typically only when uncertainties are  attached to central values.
+AutoUncertainties is a Python package for uncertainty propagation of independent random variables. 
+It provides a drop-in mechanism to add uncertainty information to Python scalar and NumPy array 
+objects. It implements manual propagation rules for the Python dunder math methods, and uses automatic 
+differentiation via JAX to propagate uncertainties for most NumPy methods applied to both scalar 
+and NumPy array variables. In doing so, it eliminates the need for carrying around additional 
+uncertainty variables or for implementing custom propagation rules for any NumPy operator with 
+a gradient rule implemented by JAX. In  most cases, it requires minimal modification to 
+existing code—typically only when uncertainties are  attached to central values.
 
 One of the most important aspects of AutoUncertainties is its seamless support for NumPy:
 
@@ -89,11 +89,11 @@ Dependent Random Variables
 **************************
 
 To simplify operations on `~auto_uncertainties.uncertainty.uncertainty_containers.Uncertainty` objects,
-`AutoUncertainties` assumes all variables are independent and normally distributed. This means that, in
-the case where a user assumes dependence between two or more `Uncertainty` objects, unexpected and
-counter-intuitive behavior may arise during uncertainty propagation. This is a common pitfall when working
-with `Uncertainty` objects, especially since the package will not prevent you from manipulating variables
-in a manner that implies dependence.
+`AutoUncertainties` assumes all variables are independent. This means that, in the case where the 
+programmer assumes dependence between two or more `Uncertainty` objects, unexpected and counter-intuitive 
+behavior may arise during uncertainty propagation. This is a common pitfall when working with `Uncertainty` 
+objects, especially since the package will not prevent you from manipulating variables in a manner that 
+implies dependence.
 
 - **Subtracting Equivalent Uncertainties**
 
