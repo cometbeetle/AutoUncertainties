@@ -19,7 +19,7 @@ affiliations:
    index: 1
 
 bibliography: paper.bib
-date: 21 May 2025
+date: 20 Jun 2025
 ---
 
 # Summary
@@ -34,8 +34,8 @@ The Python package `AutoUncertainties`, described here, provides a solution to t
 
 # Statement of Need
 
-`AutoUncertainties` is a Python package for uncertainty propagation of independent and identically
-distributed (i.i.d.) random variables. It provides a drop-in mechanism to add uncertainty information 
+`AutoUncertainties` is a Python package for uncertainty propagation of independent 
+random variables. It provides a drop-in mechanism to add uncertainty information 
 to Python scalar and `NumPy` [@harris2020array] array objects. It implements manual propagation rules 
 for the Python dunder math methods, and uses automatic differentiation via `JAX` [@jax2018github] to propagate 
 uncertainties for most `NumPy` methods applied to both scalar and `NumPy` array variables. In doing so,
@@ -70,12 +70,12 @@ be operated on by the `unumpy` suite of functions.
 
 # Implementation
 
-For a function $f : \mathbb{R}^n \rightarrow \mathbb{R}^m$ of $n$ i.i.d. 
+For a function $f : \mathbb{R}^n \rightarrow \mathbb{R}^m$ of $n$ independent
 variables, linear uncertainty propagation can be computed via the simple rule 
 $$ \delta f_j (\mathbf x)^2 = \sum_i^n \left(\dfrac{\partial f_j}{\partial x_i} \delta x_i \right)^2, \quad\quad j \in [1, m].$$
 
 To compute $\dfrac{\partial f_j}{\partial x_i}$ for arbitrary $f$, the implementation in `AutoUncertainties` relies on
-automatic differentiaion provided by `JAX`. Calls to any `NumPy` array function or universal function (ufunc) are 
+automatic differentiation provided by `JAX`. Calls to any `NumPy` array function or universal function (ufunc) are 
 intercepted via the `__array_function__` and `__array_ufunc__` mechanism, and dispatched to a `NumPy` wrapper routine 
 that computes the Jacobian matrix via `jax.jacfwd`.
 
@@ -155,12 +155,12 @@ print(type(new_quantity))  # <class 'pint.Quantity'>
 
 ## Dependent Random Variables
 
-To simplify operations on `Uncertainty` objects, `AutoUncertainties` assumes all variables are independent
-and normally distributed. This means that, in the case where the programmer assumes dependence
-between two or more `Uncertainty` objects, unexpected and counter-intuitive behavior may arise during 
-uncertainty propagation. This is a common pitfall when working with `Uncertainty` objects, especially since 
-the package will not prevent users from manipulating variables in a manner that implies dependence. Examples 
-of this behavior, along with certain potential workarounds, can be found [here](https://autouncertainties.readthedocs.io/en/latest/index.html#current-limitations-and-future-work) 
+To simplify operations on `Uncertainty` objects, `AutoUncertainties` assumes all variables are independent.
+This means that, in the case where the programmer assumes dependence between two or more `Uncertainty` 
+objects, unexpected and counter-intuitive behavior may arise during uncertainty propagation. This is 
+a common pitfall when working with `Uncertainty` objects, especially since the package will not prevent 
+programmers from manipulating variables in a manner that implies dependence. Examples of this behavior, 
+along with certain potential workarounds, can be found [here](https://autouncertainties.readthedocs.io/en/latest/index.html#current-limitations-and-future-work) 
 in the documentation. In general, most binary operations involving the same variable twice will 
 produce undesired results (for instance, performing `X - X`, where `X` is an `Uncertainty` object, will
 *not* result in a standard deviation of zero).
